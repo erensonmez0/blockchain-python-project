@@ -15,7 +15,7 @@ class Blockchain:
         self.nodes = set()
 
         # Create the genesis block
-        self.new_block(previous_hash='1', proof=100)
+        self.new_block(previous_hash='1', proof=100, message_type='enrolment', message_content={})
 
     def register_node(self, address):
         """
@@ -41,21 +41,28 @@ class Blockchain:
         :return: True if valid, False if not
         """
 
-        last_block = chain[0]
+        print("Checking the chain is valid")
+
+        last_block = chain[1]
+        print("Last block is --->", last_block)
         current_index = 1
 
         while current_index < len(chain):
-            block = chain[current_index]
+            block = chain[current_index + 1]
             print(f'{last_block}')
             print(f'{block}')
             print("\n-----------\n")
             # Check that the hash of the block is correct
             if block['previous_hash'] != self.hash(last_block):
+                # print ("Hashes are not matching")
                 return False
 
             # Check that the Proof of Work is correct
             if not self.valid_proof(last_block['proof'], block['proof'], last_block['previous_hash']):
+                print("The chain is not valid")
                 return False
+
+            print("The chain is valid")
 
             last_block = block
             current_index += 1
@@ -85,6 +92,7 @@ class Blockchain:
                 chain = response.json()['chain']
 
                 # Check if the length is longer and the chain is valid
+                print("Lengths are -->", length, max_length)
                 if length > max_length and self.valid_chain(chain):
                     max_length = length
                     new_chain = chain
@@ -96,14 +104,24 @@ class Blockchain:
 
         return False
 
-    def new_block(self, proof, previous_hash):
+    def new_block(self, proof, previous_hash, message_type="standard", message_content={}):
         """
         Create a new Block in the Blockchain
 
         :param proof: The proof given by the Proof of Work algorithm
         :param previous_hash: Hash of previous Block
+        :param message_type: Type of message ('challenge', 'response' or 'enrolment')
+        :param message_content: Content of the message, defaults to an empty dictionary for the genesis block
         :return: New Block
         """
+
+        # Check if there have been any transactions
+        if self.current_transactions:
+            # Check if any transaction is from the sender
+            for transaction in self.current_transactions:
+                if transaction['sender'] != "0":  # Assuming "0" is the mining reward sender
+                    message_type = "response"
+                    break
 
         block = {
             'index': len(self.chain) + 1,
@@ -111,6 +129,8 @@ class Blockchain:
             'transactions': self.current_transactions,
             'proof': proof,
             'previous_hash': previous_hash or self.hash(self.chain[-1]),
+            'message_type': message_type,
+            'message_content': message_content
         }
 
         # Reset the current list of transactions
@@ -170,6 +190,7 @@ class Blockchain:
         while self.valid_proof(last_proof, proof, last_hash) is False:
             proof += 1
 
+        print(proof)
         return proof
 
     @staticmethod
@@ -185,7 +206,13 @@ class Blockchain:
         """
 
         guess = f'{last_proof}{proof}{last_hash}'.encode()
+        print("Guess is ---->", guess)
         guess_hash = hashlib.sha256(guess).hexdigest()
+
+        print("Hash is ------>", guess_hash)
+        print("First four bytes are like this --->", guess_hash[:4])
+        print(guess_hash[:4] == "0000")
+
         return guess_hash[:4] == "0000"
 
 
@@ -215,7 +242,7 @@ def mine():
 
     # Forge the new Block by adding it to the chain
     previous_hash = blockchain.hash(last_block)
-    block = blockchain.new_block(proof, previous_hash)
+    block = blockchain.new_block(proof, previous_hash, message_type="standard")
 
     response = {
         'message': "New Block Forged",
@@ -223,6 +250,8 @@ def mine():
         'transactions': block['transactions'],
         'proof': block['proof'],
         'previous_hash': block['previous_hash'],
+        'message_type': block['message_type'],
+        'message_content': block['message_content']
     }
     return jsonify(response), 200
 
@@ -241,6 +270,13 @@ def new_transaction():
 
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
+
+
+@app.route('/id', methods=['GET'])
+def get_node_id():
+    # Retrieve the unique identifier of the node
+    response = {'node_id': node_identifier}
+    return jsonify(response), 200
 
 
 @app.route('/chain', methods=['GET'])
@@ -296,4 +332,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
 
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
