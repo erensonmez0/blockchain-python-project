@@ -13,6 +13,7 @@ class Blockchain:
         self.current_transactions = []
         self.chain = []
         self.nodes = set()
+        self.is_synchronized = False  # Synchronization flag
 
         # Create the genesis block
         self.new_block(previous_hash='1', proof=100, message_type='enrolment', message_content={})
@@ -43,26 +44,21 @@ class Blockchain:
 
         print("Checking the chain is valid")
 
-        last_block = chain[1]
-        print("Last block is --->", last_block)
+        last_block = chain[0]
         current_index = 1
 
         while current_index < len(chain):
-            block = chain[current_index + 1]
+            block = chain[current_index]
             print(f'{last_block}')
             print(f'{block}')
             print("\n-----------\n")
             # Check that the hash of the block is correct
             if block['previous_hash'] != self.hash(last_block):
-                # print ("Hashes are not matching")
                 return False
 
             # Check that the Proof of Work is correct
-            if not self.valid_proof(last_block['proof'], block['proof'], last_block['previous_hash']):
-                print("The chain is not valid")
+            if not self.valid_proof(last_block['proof'], block['proof'], block['previous_hash']):
                 return False
-
-            print("The chain is valid")
 
             last_block = block
             current_index += 1
@@ -92,7 +88,6 @@ class Blockchain:
                 chain = response.json()['chain']
 
                 # Check if the length is longer and the chain is valid
-                print("Lengths are -->", length, max_length)
                 if length > max_length and self.valid_chain(chain):
                     max_length = length
                     new_chain = chain
@@ -100,6 +95,7 @@ class Blockchain:
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
             self.chain = new_chain
+            self.is_synchronized = True  # Chain is now synchronized
             return True
 
         return False
@@ -137,9 +133,14 @@ class Blockchain:
         self.current_transactions = []
 
         self.chain.append(block)
+
+        # Process the block if the chain is synchronized
+        if self.is_synchronized:
+            self.process_block(block)
+
         return block
 
-    def new_transaction(self, sender, recipient, amount):
+    def new_transaction(self, sender, recipient, amount, message=""):
         """
         Creates a new transaction to go into the next mined Block
 
@@ -152,6 +153,7 @@ class Blockchain:
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'message': message
         })
 
         return self.last_block['index'] + 1
@@ -206,14 +208,37 @@ class Blockchain:
         """
 
         guess = f'{last_proof}{proof}{last_hash}'.encode()
-        print("Guess is ---->", guess)
         guess_hash = hashlib.sha256(guess).hexdigest()
-
-        print("Hash is ------>", guess_hash)
-        print("First four bytes are like this --->", guess_hash[:4])
-        print(guess_hash[:4] == "0000")
-
         return guess_hash[:4] == "0000"
+
+    def process_block(self, block):
+        """
+        Process a block to look for tasks the node should perform.
+
+        :param block: The block to be processed.
+        """
+        for transaction in block['transactions']:
+            if transaction['recipient'] == node_identifier:
+                # self.perform_task() # A possible simple task (?)
+                # After task is performed, create a response transaction
+                response_content = self.hash_message(transaction)
+                self.new_transaction(
+                    sender=node_identifier,
+                    recipient=transaction['sender'],
+                    amount=0,  # No real amount; it's a response message
+                    message=response_content  # Adding the response message as part of the transaction
+                )
+
+    @staticmethod
+    def hash_message(transaction):
+        """
+        Create a hashed message as a response.
+
+        :param transaction: The transaction to be hashed.
+        :return: A hashed string representing the response.
+        """
+        message = f"Response to transaction {transaction['sender']} -> {transaction['recipient']}: {transaction['amount']}"
+        return hashlib.sha256(message.encode()).hexdigest()
 
 
 # Instantiate the Node
