@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with new blockchain logic" />
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with the last version of the framework (added four new functions and extended the transaction parameters)">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -112,18 +117,6 @@
     &quot;git-widget-placeholder&quot;: &quot;master&quot;
   }
 }</component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
   <component name="RunManager">
     <configuration name="FlaskBlockChain" type="PythonConfigurationType" factoryName="Python" singleton="true">
       <module name="FlaskBlockChain" />
@@ -176,7 +169,23 @@
       <option name="project" value="LOCAL" />
       <updated>1724323420400</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Updated main Python file with the last version of the framework">
+      <option name="closed" value="true" />
+      <created>1728466097953</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1728466097953</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Updated main Python file with the last version of the framework (added four new functions and extended the transaction parameters)">
+      <option name="closed" value="true" />
+      <created>1729151834437</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1729151834437</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -208,12 +217,11 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
-  <component name="VcsContentAnnotationSettings">
-    <option name="myLimit" value="2678400000" />
-  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Updated main Python file with new blockchain logic" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with new blockchain logic" />
+    <MESSAGE value="Updated main Python file with the last version of the framework" />
+    <MESSAGE value="Updated main Python file with the last version of the framework (added four new functions and extended the transaction parameters)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with the last version of the framework (added four new functions and extended the transaction parameters)" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">
