@@ -140,23 +140,101 @@ class Blockchain:
 
         return block
 
-    def new_transaction(self, sender, recipient, amount, message=""):
-        """
+    def new_transaction(self, sender, recipient, amount, function_name=None, function_parameter=None):
+        if function_parameter is not None:
+            try:
+                function_parameter = int(function_parameter)
+            except ValueError:
+                raise ValueError('function_parameter must be an integer')
+        """ 
         Creates a new transaction to go into the next mined Block
 
         :param sender: Address of the Sender
         :param recipient: Address of the Recipient
         :param amount: Amount
+        :param function_name: Name of the function to execute (optional)
+        :param function_parameter: Parameter for the function (optional)
         :return: The index of the Block that will hold this transaction
         """
-        self.current_transactions.append({
+        transaction = {
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
-            'message': message
-        })
+        }
+
+        function_map = {
+            "fibonacci": self.calculate_fibonacci,
+            "hash_test": self.hash_n_times,
+            "factorial": self.calculate_factorial,
+            "sum_natural": self.sum_natural,
+        }
+
+        if function_name in function_map:
+            transaction['function_name'] = function_name
+            transaction['function_result'] = function_map[function_name](function_parameter)
+
+        self.current_transactions.append(transaction)
 
         return self.last_block['index'] + 1
+
+    @staticmethod
+    def calculate_fibonacci(n):
+        """
+        Calculate the n. term of the Fibonacci sequence
+
+        :param n: The term of the Fibonacci sequence to calculate
+        :return: The nth term
+        """
+        if n <= 0:
+            return 0
+        elif n == 1:
+            return 1
+        else:
+            a, b = 0, 1
+            for _ in range(2, n + 1):
+                a, b = b, a + b
+            return b
+
+    @staticmethod
+    def hash_n_times(n):
+        """
+        Hash a predefined internal hash n times
+
+        :param n: Number of times to hash the base hash
+        :return: Resulting hash after N times
+        """
+        base_hash = "internalhashvalue"
+        current_hash = hashlib.sha256(base_hash.encode()).hexdigest()
+        for _ in range(n - 1):
+            current_hash = hashlib.sha256(current_hash.encode()).hexdigest()
+        return current_hash
+
+    @staticmethod
+    def calculate_factorial(n):
+        """
+        Calculate the factorial of a given number.
+
+        :param n: The term to calculate the factorial for
+        :return: The factorial of n
+        """
+        if n < 0:
+            return "Undefined for negative values"
+        result = 1
+        for i in range(2, n + 1):
+            result *= i
+        return result
+
+    @staticmethod
+    def sum_natural(n):
+        """
+        Calculate the sum of all natural numbers up to n.
+
+        :param n: The number up to which the sum is calculated
+        :return: The sum of all natural numbers up to n
+        """
+        if n < 0:
+            return "Undefined for negative values"
+        return n * (n + 1) // 2
 
     @property
     def last_block(self):
@@ -210,24 +288,6 @@ class Blockchain:
         guess = f'{last_proof}{proof}{last_hash}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
-
-    def process_block(self, block):
-        """
-        Process a block to look for tasks the node should perform.
-
-        :param block: The block to be processed.
-        """
-        for transaction in block['transactions']:
-            if transaction['recipient'] == node_identifier:
-                # self.perform_task() # A possible simple task (?)
-                # After task is performed, create a response transaction
-                response_content = self.hash_message(transaction)
-                self.new_transaction(
-                    sender=node_identifier,
-                    recipient=transaction['sender'],
-                    amount=0,  # No real amount; it's a response message
-                    message=response_content  # Adding the response message as part of the transaction
-                )
 
     @staticmethod
     def hash_message(transaction):
@@ -291,7 +351,13 @@ def new_transaction():
         return 'Missing values', 400
 
     # Create a new Transaction
-    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+    index = blockchain.new_transaction(
+        sender=values['sender'],
+        recipient=values['recipient'],
+        amount=values['amount'],
+        function_name=values.get('function_name'),
+        function_parameter=values.get('function_parameter')
+    )
 
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
