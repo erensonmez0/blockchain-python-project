@@ -13,10 +13,9 @@ class Blockchain:
         self.current_transactions = []
         self.chain = []
         self.nodes = set()
-        self.is_synchronized = False  # Synchronization flag
 
         # Create the genesis block
-        self.new_block(previous_hash='1', proof=100, message_type='enrolment', message_content={})
+        self.new_block(previous_hash='1', proof=100)
 
     def register_node(self, address):
         """
@@ -95,29 +94,31 @@ class Blockchain:
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
             self.chain = new_chain
-            self.is_synchronized = True  # Chain is now synchronized
             return True
 
         return False
 
-    def new_block(self, proof, previous_hash, message_type="standard", message_content={}):
+    def notify_neighbors(self):
+        """
+        Notify all neighbors that the blockchain has been updated by sending the hash of the latest block.
+        """
+        last_block_hash = self.hash(self.last_block)
+        for node in self.nodes:
+            try:
+                response = requests.post(f'http://{node}/notify_change', json={'last_block_hash': last_block_hash})
+                if response.status_code == 200:
+                    print(f"Notified node {node}, response: {response.json()}")
+            except requests.exceptions.RequestException:
+                print(f"Failed to notify node {node}")
+
+    def new_block(self, proof, previous_hash):
         """
         Create a new Block in the Blockchain
 
         :param proof: The proof given by the Proof of Work algorithm
         :param previous_hash: Hash of previous Block
-        :param message_type: Type of message ('challenge', 'response' or 'enrolment')
-        :param message_content: Content of the message, defaults to an empty dictionary for the genesis block
         :return: New Block
         """
-
-        # Check if there have been any transactions
-        if self.current_transactions:
-            # Check if any transaction is from the sender
-            for transaction in self.current_transactions:
-                if transaction['sender'] != "0":  # Assuming "0" is the mining reward sender
-                    message_type = "response"
-                    break
 
         block = {
             'index': len(self.chain) + 1,
@@ -125,22 +126,26 @@ class Blockchain:
             'transactions': self.current_transactions,
             'proof': proof,
             'previous_hash': previous_hash or self.hash(self.chain[-1]),
-            'message_type': message_type,
-            'message_content': message_content
         }
+
+        self.chain.append(block)
+
+        # Check and execute requests before clearing the current transactions
+        # self.check_and_execute_requests()
+
+        # Notify neighbors after adding a new block
+        self.notify_neighbors()
 
         # Reset the current list of transactions
         self.current_transactions = []
 
-        self.chain.append(block)
-
-        # Process the block if the chain is synchronized
-        if self.is_synchronized:
-            self.process_block(block)
-
         return block
 
-    def new_transaction(self, sender, recipient, amount, function_name=None, function_parameter=None):
+    def new_transaction(self, sender, recipient, amount=0, transaction_type="standard", function_name=None,
+                        function_parameter=None):
+
+        # TODO: We may remove the 'amount' parameter in the future, for now set to default 0 if not provided
+
         if function_parameter is not None:
             try:
                 function_parameter = int(function_parameter)
@@ -160,22 +165,49 @@ class Blockchain:
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'transaction_type': transaction_type
         }
 
-        function_map = {
-            "fibonacci": self.calculate_fibonacci,
-            "hash_test": self.hash_n_times,
-            "factorial": self.calculate_factorial,
-            "sum_natural": self.sum_natural,
-        }
-
-        if function_name in function_map:
+        if function_name and function_parameter is not None:
+            transaction['transaction_type'] = "request"
             transaction['function_name'] = function_name
-            transaction['function_result'] = function_map[function_name](function_parameter)
+            transaction['function_parameter'] = function_parameter
 
         self.current_transactions.append(transaction)
-
         return self.last_block['index'] + 1
+
+    def check_and_execute_requests(self):
+        """
+        Checks the blockchain for any pending computation requests directed to this node and executes them.
+
+        This method iterates over all the blocks in the blockchain to identify transactions where the current node
+        is the recipient and the transaction type is "request". For each identified transaction, the corresponding
+        computation (fibonacci, hash test, factorial, sum of natural numbers) is executed based on the function
+        name and parameter specified in the transaction. After executing the computation, a new "response" transaction
+        is created with the result and sent back to the original sender.
+        """
+        for block in self.chain:
+            for transaction in block['transactions']:
+                if transaction['recipient'] == node_identifier and transaction['transaction_type'] == 'request':
+                    function_name = transaction.get('function_name')
+                    function_parameter = transaction.get('function_parameter')
+                    if function_name and function_parameter is not None:
+                        function_map = {
+                            "fibonacci": self.calculate_fibonacci,
+                            "hash_test": self.hash_n_times,
+                            "factorial": self.calculate_factorial,
+                            "sum_natural": self.sum_natural,
+                        }
+                        if function_name in function_map:
+                            result = function_map[function_name](function_parameter)
+                            self.new_transaction(
+                                sender=node_identifier,
+                                recipient=transaction['sender'],
+                                transaction_type="response",
+                                amount=0,
+                                function_name=function_name,
+                                function_parameter=result
+                            )
 
     @staticmethod
     def calculate_fibonacci(n):
@@ -289,17 +321,6 @@ class Blockchain:
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
 
-    @staticmethod
-    def hash_message(transaction):
-        """
-        Create a hashed message as a response.
-
-        :param transaction: The transaction to be hashed.
-        :return: A hashed string representing the response.
-        """
-        message = f"Response to transaction {transaction['sender']} -> {transaction['recipient']}: {transaction['amount']}"
-        return hashlib.sha256(message.encode()).hexdigest()
-
 
 # Instantiate the Node
 app = Flask(__name__)
@@ -327,7 +348,13 @@ def mine():
 
     # Forge the new Block by adding it to the chain
     previous_hash = blockchain.hash(last_block)
-    block = blockchain.new_block(proof, previous_hash, message_type="standard")
+    block = blockchain.new_block(proof, previous_hash)
+
+    # After mining the block, check and execute any requests directed to this node
+    blockchain.check_and_execute_requests()
+
+    # Notify neighbors after mining a new block
+    blockchain.notify_neighbors()
 
     response = {
         'message': "New Block Forged",
@@ -335,8 +362,6 @@ def mine():
         'transactions': block['transactions'],
         'proof': block['proof'],
         'previous_hash': block['previous_hash'],
-        'message_type': block['message_type'],
-        'message_content': block['message_content']
     }
     return jsonify(response), 200
 
@@ -346,7 +371,7 @@ def new_transaction():
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
-    required = ['sender', 'recipient', 'amount']
+    required = ['sender', 'recipient', 'transaction_type']
     if not all(k in values for k in required):
         return 'Missing values', 400
 
@@ -354,7 +379,8 @@ def new_transaction():
     index = blockchain.new_transaction(
         sender=values['sender'],
         recipient=values['recipient'],
-        amount=values['amount'],
+        amount=values.get('amount', 0),  # Default 0 if not provided
+        transaction_type=values['transaction_type'],
         function_name=values.get('function_name'),
         function_parameter=values.get('function_parameter')
     )
@@ -368,6 +394,28 @@ def get_node_id():
     # Retrieve the unique identifier of the node
     response = {'node_id': node_identifier}
     return jsonify(response), 200
+
+
+@app.route('/notify_change', methods=['POST'])
+def notify_change():
+    values = request.get_json()
+
+    if 'last_block_hash' not in values:
+        return 'Missing last_block_hash', 400
+
+    last_block_hash = values['last_block_hash']
+    local_last_block_hash = blockchain.hash(blockchain.last_block)
+
+    # Check if the local chain is already synchronized
+    if last_block_hash != local_last_block_hash:
+        # If hashes differ, synchronize the chain by fetching from the notifying node
+        replaced = blockchain.resolve_conflicts()
+        if replaced:
+            return jsonify({'message': 'Chain updated successfully'}), 200
+        else:
+            return jsonify({'message': 'No update needed, chain is already up to date'}), 200
+
+    return jsonify({'message': 'Chain already up to date'}), 200
 
 
 @app.route('/chain', methods=['GET'])
