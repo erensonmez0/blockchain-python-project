@@ -176,17 +176,11 @@ class Blockchain:
         self.current_transactions.append(transaction)
         return self.last_block['index'] + 1
 
-    def check_and_execute_requests(self):
+    def check_and_execute_requests(self, blocks):
         """
-        Checks the blockchain for any pending computation requests directed to this node and executes them.
-
-        This method iterates over all the blocks in the blockchain to identify transactions where the current node
-        is the recipient and the transaction type is "request". For each identified transaction, the corresponding
-        computation (fibonacci, hash test, factorial, sum of natural numbers) is executed based on the function
-        name and parameter specified in the transaction. After executing the computation, a new "response" transaction
-        is created with the result and sent back to the original sender.
+        Checks the provided blocks for any pending computation requests directed to this node and executes them.
         """
-        for block in self.chain:
+        for block in blocks:
             for transaction in block['transactions']:
                 if transaction['recipient'] == node_identifier and transaction['transaction_type'] == 'request':
                     function_name = transaction.get('function_name')
@@ -199,15 +193,31 @@ class Blockchain:
                             "sum_natural": self.sum_natural,
                         }
                         if function_name in function_map:
+                            # Execute the function and prepare result
                             result = function_map[function_name](function_parameter)
-                            self.new_transaction(
-                                sender=node_identifier,
-                                recipient=transaction['sender'],
-                                transaction_type="response",
-                                amount=0,
-                                function_name=function_name,
-                                function_parameter=result
-                            )
+                            response_transaction = {
+                                "sender": node_identifier,
+                                "recipient": transaction['sender'],
+                                "transaction_type": "response",
+                                "function_name": function_name,
+                                "function_parameter": result
+                            }
+
+                            # Find the address of the recipient node and send the response transaction
+                            recipient_node = f'http://{transaction["sender"]}/transactions/new'
+                            try:
+                                response = requests.post(
+                                    recipient_node,
+                                    json=response_transaction,
+                                    headers={"Content-Type": "application/json"}
+                                )
+                                if response.status_code == 201:
+                                    print(
+                                        f"Response transaction sent to node {transaction['sender']}: {response.json()}")
+                                else:
+                                    print(f"Failed to send response to {transaction['sender']}: {response.status_code}")
+                            except requests.exceptions.RequestException as e:
+                                print(f"Error sending response to node {transaction['sender']}: {e}")
 
     @staticmethod
     def calculate_fibonacci(n):
@@ -351,7 +361,7 @@ def mine():
     block = blockchain.new_block(proof, previous_hash)
 
     # After mining the block, check and execute any requests directed to this node
-    blockchain.check_and_execute_requests()
+    blockchain.check_and_execute_requests([block])
 
     # Notify neighbors after mining a new block
     blockchain.notify_neighbors()
@@ -411,6 +421,9 @@ def notify_change():
         # If hashes differ, synchronize the chain by fetching from the notifying node
         replaced = blockchain.resolve_conflicts()
         if replaced:
+            # After updating the chain, check and execute requests in the new blocks
+            blockchain.check_and_execute_requests(
+                blockchain.chain[-(len(blockchain.chain) - len(blockchain.chain[:])):])
             return jsonify({'message': 'Chain updated successfully'}), 200
         else:
             return jsonify({'message': 'No update needed, chain is already up to date'}), 200
