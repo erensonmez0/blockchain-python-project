@@ -131,7 +131,6 @@ class Blockchain:
         self.chain.append(block)
 
         # Check and execute requests before clearing the current transactions
-        # self.check_and_execute_requests()
 
         # Notify neighbors after adding a new block
         self.notify_neighbors()
@@ -168,9 +167,9 @@ class Blockchain:
             'transaction_type': transaction_type
         }
 
-        if function_name and function_parameter is not None:
-            transaction['transaction_type'] = "request"
+        if function_name:
             transaction['function_name'] = function_name
+        if function_parameter is not None:
             transaction['function_parameter'] = function_parameter
 
         self.current_transactions.append(transaction)
@@ -204,7 +203,10 @@ class Blockchain:
                             }
 
                             # Find the address of the recipient node and send the response transaction
-                            recipient_node = f'http://{transaction["sender"]}/transactions/new'
+                            #recipient_node = f'http://{transaction["sender"]}/transactions/new'
+                            recipient_node = f'http://localhost:5001/transactions/new'
+
+                            print("Response Transaction Before Sending:", response_transaction)
                             try:
                                 response = requests.post(
                                     recipient_node,
@@ -422,8 +424,8 @@ def notify_change():
         replaced = blockchain.resolve_conflicts()
         if replaced:
             # After updating the chain, check and execute requests in the new blocks
-            blockchain.check_and_execute_requests(
-                blockchain.chain[-(len(blockchain.chain) - len(blockchain.chain[:])):])
+            # blockchain.check_and_execute_requests(
+            # blockchain.chain[-(len(blockchain.chain) - len(blockchain.chain[:])):])
             return jsonify({'message': 'Chain updated successfully'}), 200
         else:
             return jsonify({'message': 'No update needed, chain is already up to date'}), 200
