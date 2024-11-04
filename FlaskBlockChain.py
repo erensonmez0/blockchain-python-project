@@ -13,25 +13,40 @@ class Blockchain:
         self.current_transactions = []
         self.chain = []
         self.nodes = set()
+        self.node_addresses = {}
+
+        self.last_processed_block = 0
 
         # Create the genesis block
         self.new_block(previous_hash='1', proof=100)
 
     def register_node(self, address):
         """
-        Add a new node to the list of nodes
+        Add a new node to the list of nodes and fetch its unique identifier.
 
         :param address: Address of node. Eg. 'http://192.168.0.5:5000'
         """
-
         parsed_url = urlparse(address)
-        if parsed_url.netloc:
-            self.nodes.add(parsed_url.netloc)
-        elif parsed_url.path:
-            # Accepts an URL without scheme like '192.168.0.5:5000'.
-            self.nodes.add(parsed_url.path)
-        else:
-            raise ValueError('Invalid URL')
+        node_address = parsed_url.netloc if parsed_url.netloc else parsed_url.path
+
+        # Add the node's address to the set of nodes
+        self.nodes.add(node_address)
+
+        # Attempt to fetch the node's unique identifier via the /id endpoint
+        try:
+            response = requests.get(f'http://{node_address}/id')
+            if response.status_code == 200:
+                node_identifier = response.json().get('node_id')
+                if node_identifier:
+                    # Store the identifier: address mapping
+                    self.node_addresses[node_identifier] = node_address
+                    print(f"Registered node {node_address} with identifier {node_identifier}")
+                else:
+                    print(f"Failed to retrieve identifier for node {node_address}")
+            else:
+                print(f"Failed to retrieve identifier for node {node_address}, status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error connecting to node {node_address}: {e}")
 
     def valid_chain(self, chain):
         """
@@ -175,11 +190,14 @@ class Blockchain:
         self.current_transactions.append(transaction)
         return self.last_block['index'] + 1
 
-    def check_and_execute_requests(self, blocks):
+    def check_and_execute_requests(self):
         """
         Checks the provided blocks for any pending computation requests directed to this node and executes them.
         """
-        for block in blocks:
+        # Only process blocks added after the last processed block
+        new_blocks = self.chain[self.last_processed_block + 1:]
+
+        for block in new_blocks:
             for transaction in block['transactions']:
                 if transaction['recipient'] == node_identifier and transaction['transaction_type'] == 'request':
                     function_name = transaction.get('function_name')
@@ -202,24 +220,31 @@ class Blockchain:
                                 "function_parameter": result
                             }
 
-                            # Find the address of the recipient node and send the response transaction
-                            #recipient_node = f'http://{transaction["sender"]}/transactions/new'
-                            recipient_node = f'http://localhost:5001/transactions/new'
+                            recipient_node_identifier = transaction['sender']
+                            recipient_node_address = self.node_addresses.get(recipient_node_identifier)
 
-                            print("Response Transaction Before Sending:", response_transaction)
-                            try:
-                                response = requests.post(
-                                    recipient_node,
-                                    json=response_transaction,
-                                    headers={"Content-Type": "application/json"}
-                                )
-                                if response.status_code == 201:
-                                    print(
-                                        f"Response transaction sent to node {transaction['sender']}: {response.json()}")
-                                else:
-                                    print(f"Failed to send response to {transaction['sender']}: {response.status_code}")
-                            except requests.exceptions.RequestException as e:
-                                print(f"Error sending response to node {transaction['sender']}: {e}")
+                            # Send the response transaction if the recipient address is found
+                            if recipient_node_address:
+                                recipient_node_url = f'http://{recipient_node_address}/transactions/new'
+
+                                print("Response Transaction Before Sending:", response_transaction)
+                                try:
+                                    response = requests.post(
+                                        recipient_node_url,
+                                        json=response_transaction,
+                                        headers={"Content-Type": "application/json"}
+                                    )
+                                    if response.status_code == 201:
+                                        print(
+                                            f"Response transaction sent to node {recipient_node_identifier}: {response.json()}")
+                                    else:
+                                        print(
+                                            f"Failed to send response to {recipient_node_identifier}: {response.status_code}")
+                                except requests.exceptions.RequestException as e:
+                                    print(f"Error sending response to node {recipient_node_identifier}: {e}")
+
+        # Update the last processed block index to the latest block in the chain
+        self.last_processed_block = len(self.chain) - 1
 
     @staticmethod
     def calculate_fibonacci(n):
@@ -363,7 +388,7 @@ def mine():
     block = blockchain.new_block(proof, previous_hash)
 
     # After mining the block, check and execute any requests directed to this node
-    blockchain.check_and_execute_requests([block])
+    blockchain.check_and_execute_requests()
 
     # Notify neighbors after mining a new block
     blockchain.notify_neighbors()
