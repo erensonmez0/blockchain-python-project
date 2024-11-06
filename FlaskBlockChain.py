@@ -371,6 +371,10 @@ blockchain = Blockchain()
 
 @app.route('/mine', methods=['GET'])
 def mine():
+    # Only mine if there are pending transactions
+    if not blockchain.current_transactions:
+        return jsonify({'message': 'No transactions to mine'}), 200
+
     # We run the proof of work algorithm to get the next proof...
     last_block = blockchain.last_block
     proof = blockchain.proof_of_work(last_block)
