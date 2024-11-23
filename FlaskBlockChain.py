@@ -133,8 +133,7 @@ class Blockchain:
         """
         for node in self.nodes:
             try:
-                response = requests.post(f'http://{node}/update_transaction_pool',
-                                         json={'transaction_pool': self.transaction_pool})
+                response = requests.post(f'http://{node}/update_transaction_pool', json={'transaction_pool': self.transaction_pool})
                 if response.status_code == 200:
                     print(f"Notified node {node} of transaction pool update.")
             except requests.exceptions.RequestException:
@@ -149,8 +148,7 @@ class Blockchain:
         :return: New Block
         """
 
-        transactions_to_add = [transaction for transaction in self.transaction_pool if
-                               transaction['status'] == 'pending']
+        transactions_to_add = self.transaction_pool
 
         block = {
             'index': len(self.chain) + 1,
@@ -162,13 +160,14 @@ class Blockchain:
 
         self.chain.append(block)
 
-        # Mark these transactions as 'mined'
-        for transaction in transactions_to_add:
-            self.update_transaction_status(transaction)
+        # Remove mined transactions from the pool
+        self.transaction_pool = [transaction for transaction in self.transaction_pool if transaction not in transactions_to_add]
 
         # Notify neighbors after adding a new block
         self.notify_neighbors()
 
+        # Notify neighbors about the updated transaction pool
+        self.notify_transaction_pool_update()
         # Reset the current list of transactions
         # self.current_transactions = []
 
@@ -199,7 +198,6 @@ class Blockchain:
             'recipient': recipient,
             'amount': amount,
             'transaction_type': transaction_type,
-            'status': 'pending'
         }
 
         if function_name:
@@ -215,15 +213,6 @@ class Blockchain:
         self.notify_transaction_pool_update()
         # self.current_transactions.append(transaction)
         return self.last_block['index'] + 1
-
-    def update_transaction_status(self, mined_transaction):
-        """
-        Update status of the transaction to 'mined'
-        """
-        for transaction in self.transaction_pool:
-            if transaction == mined_transaction:
-                transaction['status'] = 'mined'
-                break
 
     def check_and_execute_requests(self):
         """
@@ -253,14 +242,13 @@ class Blockchain:
                                 "transaction_type": "response",
                                 "function_name": function_name,
                                 "function_parameter": result,
-                                "status": "pending"
                             }
                             self.transaction_pool.append(response_transaction)
                             # self.notify_transaction_pool_update()
                             recipient_node_identifier = transaction['sender']
                             recipient_node_address = self.node_addresses.get(recipient_node_identifier)
 
-                            # Send the response transaction if the recipient address is found
+                            # Send the response transactio+n if the recipient address is found
                             if recipient_node_address:
                                 recipient_node_url = f'http://{recipient_node_address}/transactions/new'
 
@@ -410,10 +398,7 @@ blockchain = Blockchain()
 @app.route('/mine', methods=['GET'])
 def mine():
     # Only mine if there are pending transactions
-    pending_transactions = [transaction for transaction in blockchain.transaction_pool if
-                            transaction['status'] == 'pending']
-
-    if not pending_transactions:
+    if not blockchain.transaction_pool:
         return jsonify({'message': 'No pending transactions to mine'}), 200
 
     # We run the proof of work algorithm to get the next proof...
@@ -423,10 +408,6 @@ def mine():
     # Forge the new Block by adding it to the chain
     previous_hash = blockchain.hash(last_block)
     block = blockchain.new_block(proof, previous_hash)
-
-    # Mark mined transactions as "mined"
-    for transaction in pending_transactions:
-        blockchain.update_transaction_status(transaction)
 
     # Notify neighbors after mining a new block
     blockchain.notify_neighbors()
@@ -501,7 +482,6 @@ def notify_change():
 
     return jsonify({'message': 'Chain already up to date'}), 200
 
-
 @app.route('/update_transaction_pool', methods=['POST'])
 def update_transaction_pool():
     values = request.get_json()
@@ -517,7 +497,6 @@ def update_transaction_pool():
         'message': 'Transaction pool updated successfully',
     }
     return jsonify(response), 200
-
 
 @app.route('/chain', methods=['GET'])
 def full_chain():
