@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with the last version of the framework (request &amp; response mechanism works completely)">
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with the last version of the framework (blocks can only be mined when there are pending transactions)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FlaskBlockChain.py" beforeDir="false" afterPath="$PROJECT_DIR$/FlaskBlockChain.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -238,7 +239,15 @@
       <option name="project" value="LOCAL" />
       <updated>1730745121831</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Updated main Python file with the last version of the framework (blocks can only be mined when there are pending transactions)">
+      <option name="closed" value="true" />
+      <created>1730882416873</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1730882416874</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -300,7 +309,8 @@
     <MESSAGE value="Updated main Python file with the last version of the framework (check and execute request update)" />
     <MESSAGE value="Updated main Python file with the last version of the framework (check and execute request update, response mechanism works for a specified port)" />
     <MESSAGE value="Updated main Python file with the last version of the framework (request &amp; response mechanism works completely)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with the last version of the framework (request &amp; response mechanism works completely)" />
+    <MESSAGE value="Updated main Python file with the last version of the framework (blocks can only be mined when there are pending transactions)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with the last version of the framework (blocks can only be mined when there are pending transactions)" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">
