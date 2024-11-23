@@ -133,7 +133,8 @@ class Blockchain:
         """
         for node in self.nodes:
             try:
-                response = requests.post(f'http://{node}/update_transaction_pool', json={'transaction_pool': self.transaction_pool})
+                response = requests.post(f'http://{node}/update_transaction_pool',
+                                         json={'transaction_pool': self.transaction_pool})
                 if response.status_code == 200:
                     print(f"Notified node {node} of transaction pool update.")
             except requests.exceptions.RequestException:
@@ -148,7 +149,8 @@ class Blockchain:
         :return: New Block
         """
 
-        transactions_to_add = [transaction for transaction in self.transaction_pool if transaction['status'] == 'pending']
+        transactions_to_add = [transaction for transaction in self.transaction_pool if
+                               transaction['status'] == 'pending']
 
         block = {
             'index': len(self.chain) + 1,
@@ -205,8 +207,12 @@ class Blockchain:
         if function_parameter is not None:
             transaction['function_parameter'] = function_parameter
 
+        # Prevent duplicate transactions
+        if transaction in self.transaction_pool or any(transaction in block['transactions'] for block in self.chain):
+            return self.last_block['index'] + 1
+
         self.transaction_pool.append(transaction)
-        # self.notify_transaction_pool_update()
+        self.notify_transaction_pool_update()
         # self.current_transactions.append(transaction)
         return self.last_block['index'] + 1
 
@@ -228,7 +234,7 @@ class Blockchain:
 
         for block in new_blocks:
             for transaction in block['transactions']:
-                if transaction['recipient'] == node_identifier and transaction['transaction_type'] == 'request':
+                if transaction['transaction_type'] == 'request':
                     function_name = transaction.get('function_name')
                     function_parameter = transaction.get('function_parameter')
                     if function_name and function_parameter is not None:
@@ -242,15 +248,15 @@ class Blockchain:
                             # Execute the function and prepare result
                             result = function_map[function_name](function_parameter)
                             response_transaction = {
-                                "sender": node_identifier,
+                                "sender": transaction['recipient'],
                                 "recipient": transaction['sender'],
                                 "transaction_type": "response",
                                 "function_name": function_name,
                                 "function_parameter": result,
                                 "status": "pending"
                             }
-
                             self.transaction_pool.append(response_transaction)
+                            # self.notify_transaction_pool_update()
                             recipient_node_identifier = transaction['sender']
                             recipient_node_address = self.node_addresses.get(recipient_node_identifier)
 
@@ -275,7 +281,7 @@ class Blockchain:
                                     print(f"Error sending response to node {recipient_node_identifier}: {e}")
 
         # Update the last processed block index to the latest block in the chain
-        self.notify_transaction_pool_update()
+        # self.notify_transaction_pool_update()
         self.last_processed_block = len(self.chain) - 1
 
     @staticmethod
@@ -404,7 +410,8 @@ blockchain = Blockchain()
 @app.route('/mine', methods=['GET'])
 def mine():
     # Only mine if there are pending transactions
-    pending_transactions = [transaction for transaction in blockchain.transaction_pool if transaction['status'] == 'pending']
+    pending_transactions = [transaction for transaction in blockchain.transaction_pool if
+                            transaction['status'] == 'pending']
 
     if not pending_transactions:
         return jsonify({'message': 'No pending transactions to mine'}), 200
@@ -421,14 +428,14 @@ def mine():
     for transaction in pending_transactions:
         blockchain.update_transaction_status(transaction)
 
+    # Notify neighbors after mining a new block
+    blockchain.notify_neighbors()
+
     # Notify neighbors about the updated transaction pool
     blockchain.notify_transaction_pool_update()
 
     # After mining the block, check and execute any requests directed to this node
     blockchain.check_and_execute_requests()
-
-    # Notify neighbors after mining a new block
-    blockchain.notify_neighbors()
 
     response = {
         'message': "New Block Forged",
@@ -494,6 +501,7 @@ def notify_change():
 
     return jsonify({'message': 'Chain already up to date'}), 200
 
+
 @app.route('/update_transaction_pool', methods=['POST'])
 def update_transaction_pool():
     values = request.get_json()
@@ -509,6 +517,7 @@ def update_transaction_pool():
         'message': 'Transaction pool updated successfully',
     }
     return jsonify(response), 200
+
 
 @app.route('/chain', methods=['GET'])
 def full_chain():
