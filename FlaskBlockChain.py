@@ -133,7 +133,8 @@ class Blockchain:
         """
         for node in self.nodes:
             try:
-                response = requests.post(f'http://{node}/update_transaction_pool', json={'transaction_pool': self.transaction_pool})
+                response = requests.post(f'http://{node}/update_transaction_pool',
+                                         json={'transaction_pool': self.transaction_pool})
                 if response.status_code == 200:
                     print(f"Notified node {node} of transaction pool update.")
             except requests.exceptions.RequestException:
@@ -154,7 +155,6 @@ class Blockchain:
                     )
             except requests.exceptions.RequestException as e:
                 print(f"Error syncing transaction pool from node {node}: {e}")
-
 
     def new_block(self, proof, previous_hash):
         """
@@ -178,7 +178,8 @@ class Blockchain:
         self.chain.append(block)
 
         # Remove mined transactions from the pool
-        self.transaction_pool = [transaction for transaction in self.transaction_pool if transaction not in transactions_to_add]
+        self.transaction_pool = [transaction for transaction in self.transaction_pool if
+                                 transaction not in transactions_to_add]
 
         # Notify neighbors after adding a new block
         self.notify_neighbors()
@@ -260,11 +261,11 @@ class Blockchain:
                                 "function_name": function_name,
                                 "function_parameter": result,
                             }
-                            # self.notify_transaction_pool_update()
+
                             recipient_node_identifier = transaction['sender']
                             recipient_node_address = self.node_addresses.get(recipient_node_identifier)
 
-                            # Send the response transactio+n if the recipient address is found
+                            # Send the response transaction if the recipient address is found
                             if recipient_node_address:
                                 recipient_node_url = f'http://{recipient_node_address}/transactions/new'
 
@@ -413,9 +414,6 @@ blockchain = Blockchain()
 
 @app.route('/mine', methods=['GET'])
 def mine():
-    # Sync transaction pool with neighbors before mining
-    blockchain.sync_transaction_pool()
-
     # Only mine if there are pending transactions
     if not blockchain.transaction_pool:
         return jsonify({'message': 'No pending transactions to mine'}), 200
