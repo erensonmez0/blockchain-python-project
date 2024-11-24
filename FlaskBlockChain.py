@@ -243,7 +243,6 @@ class Blockchain:
                                 "function_name": function_name,
                                 "function_parameter": result,
                             }
-                            self.transaction_pool.append(response_transaction)
                             # self.notify_transaction_pool_update()
                             recipient_node_identifier = transaction['sender']
                             recipient_node_address = self.node_addresses.get(recipient_node_identifier)

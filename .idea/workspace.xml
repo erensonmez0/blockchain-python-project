@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with the last version of the framework (Every node can also mine every other node's response blocks)">
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [there are some duplicate extra blocks created! fix that])">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FlaskBlockChain.py" beforeDir="false" afterPath="$PROJECT_DIR$/FlaskBlockChain.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +53,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="develop" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -117,13 +116,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "secondDevelop",
+    "settings.editor.selected.configurable": "vcs.Git"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="FlaskBlockChain" type="PythonConfigurationType" factoryName="Python" singleton="true">
       <module name="FlaskBlockChain" />
@@ -256,7 +255,23 @@
       <option name="project" value="LOCAL" />
       <updated>1732349890596</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [there are some duplicate extra blocks created! fix that])">
+      <option name="closed" value="true" />
+      <created>1732375728415</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1732375728415</updated>
+    </task>
+    <task id="LOCAL-00013" summary="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [there are some duplicate extra blocks created! fix that])">
+      <option name="closed" value="true" />
+      <created>1732386613836</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1732386613836</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -299,7 +314,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="master" />
+                        <option value="secondDevelop" />
                       </list>
                     </value>
                   </entry>
@@ -320,7 +335,8 @@
     <MESSAGE value="Updated main Python file with the last version of the framework (request &amp; response mechanism works completely)" />
     <MESSAGE value="Updated main Python file with the last version of the framework (blocks can only be mined when there are pending transactions)" />
     <MESSAGE value="Updated main Python file with the last version of the framework (Every node can also mine every other node's response blocks)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with the last version of the framework (Every node can also mine every other node's response blocks)" />
+    <MESSAGE value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [there are some duplicate extra blocks created! fix that])" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [there are some duplicate extra blocks created! fix that])" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">
