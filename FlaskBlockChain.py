@@ -139,6 +139,23 @@ class Blockchain:
             except requests.exceptions.RequestException:
                 print(f"Failed to notify node {node} of transaction pool update.")
 
+    def sync_transaction_pool(self):
+        """
+        Fetch transaction pool updates from neighbors and merge with local pool.
+        """
+        for node in self.nodes:
+            try:
+                response = requests.get(f'http://{node}/transaction_pool')
+                if response.status_code == 200:
+                    neighbor_pool = response.json().get('transaction_pool', [])
+                    # Merge the neighbor's pool with the local pool, avoiding duplicates
+                    self.transaction_pool.extend(
+                        tx for tx in neighbor_pool if tx not in self.transaction_pool
+                    )
+            except requests.exceptions.RequestException as e:
+                print(f"Error syncing transaction pool from node {node}: {e}")
+
+
     def new_block(self, proof, previous_hash):
         """
         Create a new Block in the Blockchain
@@ -396,6 +413,9 @@ blockchain = Blockchain()
 
 @app.route('/mine', methods=['GET'])
 def mine():
+    # Sync transaction pool with neighbors before mining
+    blockchain.sync_transaction_pool()
+
     # Only mine if there are pending transactions
     if not blockchain.transaction_pool:
         return jsonify({'message': 'No pending transactions to mine'}), 200
