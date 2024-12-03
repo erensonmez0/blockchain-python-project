@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [All the problems regarding this logic is actually NOW fixed]. Just an important thing, as the nodes get registered to each other in the very beginning, they should also register THEMSELVES!)">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. For now registration logic is not properly implemented, but the nodes get launched with the newly added script." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -295,7 +293,15 @@
       <option name="project" value="LOCAL" />
       <updated>1732466612981</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. For now registration logic is not properly implemented, but the nodes get launched with the newly added script.">
+      <option name="closed" value="true" />
+      <created>1732719571361</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1732719571361</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -363,7 +369,8 @@
     <MESSAGE value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [when the same node tries to mine both request and response transaction's blocks, it doesn't work properly. Other than that when two transactions are sent without being separately mined, there's a delay with the mining process. fix those!])" />
     <MESSAGE value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [All the problems regarding this logic is fixed]. Also implemented the logic of erasing the mined transactions instead of storing them with the parameter 'status'.)" />
     <MESSAGE value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [All the problems regarding this logic is actually NOW fixed]. Just an important thing, as the nodes get registered to each other in the very beginning, they should also register THEMSELVES!)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [All the problems regarding this logic is actually NOW fixed]. Just an important thing, as the nodes get registered to each other in the very beginning, they should also register THEMSELVES!)" />
+    <MESSAGE value="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. For now registration logic is not properly implemented, but the nodes get launched with the newly added script." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. For now registration logic is not properly implemented, but the nodes get launched with the newly added script." />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">

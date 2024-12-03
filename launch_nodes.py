@@ -1,6 +1,7 @@
 import subprocess
-# import requests
+import requests
 import os
+import time
 
 
 def launch_nodes(node_count, base_port=5000):
@@ -32,24 +33,21 @@ def launch_nodes(node_count, base_port=5000):
     return processes
 
 
-"""
-
 def register_nodes(ports):
     base_url = "http://localhost"
     for port in ports:
         node_url = f"{base_url}:{port}"
         for other_port in ports:
-            if port != other_port:  # Don't register a node to itself.
-                try:
-                    response = requests.post(
-                        f"{node_url}/nodes/register",
-                        json={"nodes": [f"{base_url}:{other_port}"]}
-                    )
-                    if response.status_code == 201:
-                        print(f"Node {port} registered {other_port} successfully.")
-                except requests.RequestException as e:
-                    print(f"Failed to register node {other_port} to {port}: {e}")
-"""
+            try:
+                response = requests.post(
+                    f"{node_url}/nodes/register",
+                    json={"nodes": [f"{base_url}:{other_port}"]}
+                )
+                if response.status_code == 201:
+                    print(f"Node {port} registered {other_port} successfully.")
+            except requests.RequestException as e:
+                print(f"Failed to register node {other_port} to {port}: {e}")
+
 
 if __name__ == "__main__":
     node_count = int(input("How many nodes do you want to launch? "))
@@ -57,12 +55,13 @@ if __name__ == "__main__":
 
     # Step 1: Launch the nodes
     launched_nodes = launch_nodes(node_count)
-    """
+
+    print("Registering nodes with each other...")
+    time.sleep(5)  # Adjust this delay as needed.
+
     # Step 2: Register the nodes with each other.
     ports = [base_port + i for i in range(node_count)]
-    print("Registering nodes with each other...")
     register_nodes(ports)
-    """
 
     input("Press Enter to terminate all nodes...")
     for port, process in launched_nodes:
