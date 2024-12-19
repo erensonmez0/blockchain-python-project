@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. Registration logic is now implemented.">
-      <change beforePath="$PROJECT_DIR$/launch_nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/launch_nodes.py" afterDir="false" />
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Added new fields 'parent' (for response transactions) and 'hash' for transactions, to simplify the verification process. Added a method to verify request-response transactions' correctness using the newly added fields. For now it's only checking for one specific request transaction that's given (hash of it).">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FlaskBlockChain.py" beforeDir="false" afterPath="$PROJECT_DIR$/FlaskBlockChain.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -311,7 +312,15 @@
       <option name="project" value="LOCAL" />
       <updated>1733262040991</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="Upgraded the script, launch_nodes, to have a simple interactive menu and automated transaction creation, depending on the input.">
+      <option name="closed" value="true" />
+      <created>1734450170223</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1734450170223</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -381,7 +390,9 @@
     <MESSAGE value="Updated main Python file with the last version of the framework (Every node can also mine every other node's blocks including request blocks [All the problems regarding this logic is actually NOW fixed]. Just an important thing, as the nodes get registered to each other in the very beginning, they should also register THEMSELVES!)" />
     <MESSAGE value="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. For now registration logic is not properly implemented, but the nodes get launched with the newly added script." />
     <MESSAGE value="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. Registration logic is now implemented." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added a new script, launch_nodes, to have the launch and the registration of the nodes automated, depending on the input. Registration logic is now implemented." />
+    <MESSAGE value="Upgraded the script, launch_nodes, to have a simple interactive menu and automated transaction creation, depending on the input." />
+    <MESSAGE value="Added new fields 'parent' (for response transactions) and 'hash' for transactions, to simplify the verification process. Added a method to verify request-response transactions' correctness using the newly added fields. For now it's only checking for one specific request transaction that's given (hash of it)." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added new fields 'parent' (for response transactions) and 'hash' for transactions, to simplify the verification process. Added a method to verify request-response transactions' correctness using the newly added fields. For now it's only checking for one specific request transaction that's given (hash of it)." />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">

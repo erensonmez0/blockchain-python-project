@@ -110,6 +110,7 @@ class Blockchain:
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
             self.chain = new_chain
+            # TODO: Transaction pool overwrite!!!
             return True
 
         return False
@@ -192,7 +193,7 @@ class Blockchain:
         return block
 
     def new_transaction(self, sender, recipient, amount=0, transaction_type="standard", function_name=None,
-                        function_parameter=None):
+                        function_parameter=None, parent=None):
 
         # TODO: We may remove the 'amount' parameter in the future, for now set to default 0 if not provided
 
@@ -209,6 +210,7 @@ class Blockchain:
         :param amount: Amount
         :param function_name: Name of the function to execute (optional)
         :param function_parameter: Parameter for the function (optional)
+        :param parent: The hash of the challenge transaction (only for response transactions)
         :return: The index of the Block that will hold this transaction
         """
         transaction = {
@@ -222,6 +224,12 @@ class Blockchain:
             transaction['function_name'] = function_name
         if function_parameter is not None:
             transaction['function_parameter'] = function_parameter
+        if transaction_type == "response":
+            transaction['parent'] = parent
+
+        # Compute the hash for the transaction (excluding the hash field itself)
+        transaction_hash = hashlib.sha256(json.dumps(transaction, sort_keys=True).encode()).hexdigest()
+        transaction['hash'] = transaction_hash  # Add the computed hash to the transaction
 
         # Prevent duplicate transactions
         if transaction in self.transaction_pool or any(transaction in block['transactions'] for block in self.chain):
@@ -229,7 +237,6 @@ class Blockchain:
 
         self.transaction_pool.append(transaction)
         self.notify_transaction_pool_update()
-        # self.current_transactions.append(transaction)
         return self.last_block['index'] + 1
 
     def check_and_execute_requests(self):
@@ -260,6 +267,7 @@ class Blockchain:
                                 "transaction_type": "response",
                                 "function_name": function_name,
                                 "function_parameter": result,
+                                "parent": transaction['hash'],
                             }
 
                             recipient_node_identifier = transaction['sender']
@@ -347,6 +355,65 @@ class Blockchain:
         if n < 0:
             return "Undefined for negative values"
         return n * (n + 1) // 2
+
+    def verify_request_response(self, request_hash):
+        """
+        Verify a specific request-response pair by recomputing the result and comparing it.
+
+        :param request_hash: The hash of the request transaction to verify
+        :return: 1 if valid, 0 if invalid
+        """
+        # Search for the request transaction in the blockchain
+        request_transaction = None
+        for block in self.chain:
+            for transaction in block['transactions']:
+                if transaction.get('hash') == request_hash:
+                    request_transaction = transaction
+                    break
+            if request_transaction:
+                break
+
+        if not request_transaction:
+            return {'error': 'Request transaction not found'}, 404
+
+        # Find the linked response transaction
+        parent_hash = request_hash
+        response_transaction = None
+        for block in self.chain:
+            for transaction in block['transactions']:
+                if transaction.get('parent') == parent_hash:
+                    response_transaction = transaction
+                    break
+            if response_transaction:
+                break
+
+        if not response_transaction:
+            return {'error': 'Response transaction not found'}, 404
+
+        # Recompute the function result locally
+        function_name = request_transaction.get('function_name')
+        function_parameter = request_transaction.get('function_parameter')
+
+        if not function_name or function_parameter is None:
+            return {'error': 'Invalid request transaction'}, 400
+
+        function_map = {
+            "fibonacci": self.calculate_fibonacci,
+            "hash_test": self.hash_n_times,
+            "factorial": self.calculate_factorial,
+            "sum_natural": self.sum_natural,
+        }
+
+        if function_name not in function_map:
+            return {'error': 'Unsupported function'}, 400
+
+        recomputed_result = function_map[function_name](function_parameter)
+        response_result = response_transaction.get('function_parameter')
+
+        if recomputed_result == response_result:
+            return {'valid': 1}, 200  # Verification passed
+        else:
+            return {'valid': 0}, 200  # Verification failed
 
     @property
     def last_block(self):
@@ -461,7 +528,8 @@ def new_transaction():
         amount=values.get('amount', 0),  # Default 0 if not provided
         transaction_type=values['transaction_type'],
         function_name=values.get('function_name'),
-        function_parameter=values.get('function_parameter')
+        function_parameter=values.get('function_parameter'),
+        parent=values.get('parent', None),
     )
 
     response = {'message': f'Transaction will be added to Block {index}'}
@@ -499,6 +567,7 @@ def notify_change():
 
     return jsonify({'message': 'Chain already up to date'}), 200
 
+
 @app.route('/update_transaction_pool', methods=['POST'])
 def update_transaction_pool():
     values = request.get_json()
@@ -514,6 +583,7 @@ def update_transaction_pool():
         'message': 'Transaction pool updated successfully',
     }
     return jsonify(response), 200
+
 
 @app.route('/chain', methods=['GET'])
 def full_chain():
@@ -540,6 +610,18 @@ def register_nodes():
         'total_nodes': list(blockchain.nodes),
     }
     return jsonify(response), 201
+
+
+@app.route('/verify_request', methods=['POST'])
+def verify_request():
+    values = request.get_json()
+    request_hash = values.get('request_hash')
+
+    if not request_hash:
+        return 'Missing request_hash', 400
+
+    result = blockchain.verify_request_response(request_hash)
+    return jsonify(result)
 
 
 @app.route('/nodes/resolve', methods=['GET'])
