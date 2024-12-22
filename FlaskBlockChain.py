@@ -141,22 +141,6 @@ class Blockchain:
             except requests.exceptions.RequestException:
                 print(f"Failed to notify node {node} of transaction pool update.")
 
-    def sync_transaction_pool(self):
-        """
-        Fetch transaction pool updates from neighbors and merge with local pool.
-        """
-        for node in self.nodes:
-            try:
-                response = requests.get(f'http://{node}/transaction_pool')
-                if response.status_code == 200:
-                    neighbor_pool = response.json().get('transaction_pool', [])
-                    # Merge the neighbor's pool with the local pool, avoiding duplicates
-                    self.transaction_pool.extend(
-                        tx for tx in neighbor_pool if tx not in self.transaction_pool
-                    )
-            except requests.exceptions.RequestException as e:
-                print(f"Error syncing transaction pool from node {node}: {e}")
-
     def new_block(self, proof, previous_hash):
         """
         Create a new Block in the Blockchain
@@ -192,10 +176,8 @@ class Blockchain:
 
         return block
 
-    def new_transaction(self, sender, recipient, amount=0, transaction_type="standard", function_name=None,
+    def new_transaction(self, sender, recipient, transaction_type="standard", function_name=None,
                         function_parameter=None, parent=None):
-
-        # TODO: We may remove the 'amount' parameter in the future, for now set to default 0 if not provided
 
         if function_parameter is not None:
             try:
@@ -207,7 +189,6 @@ class Blockchain:
 
         :param sender: Address of the Sender
         :param recipient: Address of the Recipient
-        :param amount: Amount
         :param function_name: Name of the function to execute (optional)
         :param function_parameter: Parameter for the function (optional)
         :param parent: The hash of the challenge transaction (only for response transactions)
@@ -216,7 +197,6 @@ class Blockchain:
         transaction = {
             'sender': sender,
             'recipient': recipient,
-            'amount': amount,
             'transaction_type': transaction_type,
         }
 
@@ -525,8 +505,7 @@ def new_transaction():
     index = blockchain.new_transaction(
         sender=values['sender'],
         recipient=values['recipient'],
-        amount=values.get('amount', 0),  # Default 0 if not provided
-        transaction_type=values['transaction_type'],
+        transaction_type=values.get('transaction_type', "request"),
         function_name=values.get('function_name'),
         function_parameter=values.get('function_parameter'),
         parent=values.get('parent', None),

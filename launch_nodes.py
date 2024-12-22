@@ -1,6 +1,7 @@
 import subprocess
 import requests
 import os
+import psutil
 import time
 
 
@@ -72,14 +73,9 @@ def create_transaction(ports, node_hashes):
     print(f"Available nodes: {', '.join(map(str, ports))}")
     sender_port = int(input("Enter sender node port: ").strip())
     recipient_port = int(input("Enter recipient node port: ").strip())
-    transaction_type = input("Enter transaction type (e.g. request): ").strip()
-    amount = input("Enter amount (optional, press Enter for 0): ").strip()
-    function_name = None
-    function_parameter = None
-
-    if transaction_type == "request":
-        function_name = input("Enter function name (e.g., fibonacci, sum_natural): ").strip()
-        function_parameter = input("Enter function parameter (integer): ").strip()
+    function_name = input("Enter function name (e.g., fibonacci, sum_natural): ").strip()
+    function_parameter = input("Enter function parameter (integer): ").strip()
+    parent_hash = None  # Initialize parent hash to None
 
     # Map ports to their corresponding hashes
     sender_hash = node_hashes.get(sender_port)
@@ -93,16 +89,17 @@ def create_transaction(ports, node_hashes):
     transaction_data = {
         "sender": sender_hash,
         "recipient": recipient_hash,
-        "transaction_type": transaction_type,
-        "amount": int(amount) if amount else 0
+        "transaction_type": "request",
     }
 
     if function_name:
         transaction_data["function_name"] = function_name
     if function_parameter:
         transaction_data["function_parameter"] = int(function_parameter)
+    if parent_hash:  # Add parent hash only for response transactions
+        transaction_data["parent"] = parent_hash
 
-    # Send the transaction to the sender node
+    # Send the transaction to the recipient node
     node_url = f"http://localhost:{recipient_port}/transactions/new"
     try:
         response = requests.post(node_url, json=transaction_data)
@@ -112,6 +109,43 @@ def create_transaction(ports, node_hashes):
             print("Failed to create transaction:", response.text)
     except requests.RequestException as e:
         print(f"Error sending transaction to node {recipient_port}: {e}")
+
+
+def terminate_nodes(processes):
+    """
+    Properly terminate all launched nodes and clean up any leftover processes.
+    """
+    print("\nTerminating all nodes...")
+    for port, process in processes:
+        try:
+            # Terminate the process
+            process.terminate()
+            process.wait(timeout=5)  # Wait for the process to terminate gracefully
+            print(f"Node at http://localhost:{port} terminated.")
+        except subprocess.TimeoutExpired:
+            print(f"Node at http://localhost:{port} did not terminate in time. Killing it.")
+            process.kill()  # Force kill the process
+            process.wait()  # Ensure the process is finished
+        except Exception as e:
+            print(f"Error while terminating node at http://localhost:{port}: {e}")
+
+    # Ensure no leftover processes are running on the ports
+    clean_ports([p[0] for p in processes])
+
+
+def clean_ports(ports):
+    """
+    Kill any processes that are still using the specified ports.
+    """
+    for port in ports:
+        for proc in psutil.process_iter(attrs=["pid", "name", "cmdline"]):
+            try:
+                cmdline = proc.info["cmdline"]
+                if cmdline and any(str(port) in arg for arg in cmdline):
+                    proc.kill()  # Forcefully kill the process using the port
+                    print(f"Killed leftover process on port {port}.")
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
 
 
 def interactive_menu(processes, ports, node_hashes):
@@ -127,9 +161,7 @@ def interactive_menu(processes, ports, node_hashes):
             create_transaction(ports, node_hashes)
         elif choice == "2":
             print("Terminating all nodes...")
-            for port, process in processes:
-                process.terminate()
-                print(f"Node at http://localhost:{port} terminated.")
+            terminate_nodes(processes)
             break
         else:
             print("Invalid choice. Please try again.")
