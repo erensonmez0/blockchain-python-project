@@ -4,6 +4,7 @@ import os
 import psutil
 import random
 import time
+from FlaskBlockChain import Blockchain
 
 
 # -------------------- Node Management Functions -------------------- #
@@ -202,6 +203,61 @@ def create_transaction(ports, node_hashes):
         print(f"Error sending transaction to node {recipient_port}: {e}")
 
 
+def display_blockchain(chain):
+    print("\n--- Blockchain ---")
+    for block in chain:
+        print(f"Block {block['index']}:")
+        print(f"  Hash: {Blockchain.hash(block)}")
+        print(f"  Previous Hash: {block['previous_hash']}")
+        print(f"  Timestamp: {block['timestamp']}")
+        print(f"  Transactions: {len(block['transactions'])} transactions")
+        print("-" * 40)
+
+
+def display_transaction_pool(transaction_pool):
+    print("\n--- Transaction Pool ---")
+    if not transaction_pool:
+        print("The transaction pool is empty.")
+    else:
+        for i, transaction in enumerate(transaction_pool, start=1):
+            print(f"Transaction {i}:")
+            print(f"  Sender      : {transaction['sender']}")
+            print(f"  Recipient   : {transaction['recipient']}")
+            print(f"  Type        : {transaction['transaction_type']}")
+            if 'function_name' in transaction:
+                print(f"  Function    : {transaction['function_name']}({transaction['function_parameter']})")
+            if 'parent' in transaction:
+                print(f"  Parent Hash : {transaction['parent']}")
+            print(f"  Hash        : {transaction['hash']}")
+            print("-" * 40)
+
+
+def mine_block(node_url):
+    try:
+        response = requests.get(f"{node_url}/mine")
+        if response.status_code == 200:
+            mined_data = response.json()
+            print("\n--- Block Mined Successfully ---")
+            print(f"Block Index       : {mined_data['index']}")
+            print(f"Previous Hash     : {mined_data['previous_hash']}")
+            print(f"Proof             : {mined_data['proof']}")
+            print(f"Number of Transactions: {len(mined_data['transactions'])}")
+            if len(mined_data['transactions']) > 0:
+                print("\nTransactions:")
+                for tx in mined_data['transactions']:
+                    print(f"  - Sender      : {tx['sender']}")
+                    print(f"    Recipient   : {tx['recipient']}")
+                    print(f"    Function    : {tx['function_name']}({tx['function_parameter']})")
+                    print(f"    Hash        : {tx['hash']}")
+                    if 'parent' in tx and tx['parent']:
+                        print(f"    Parent Hash : {tx['parent']}")
+                    print()
+        else:
+            print(f"Failed to mine block: {response.status_code} - {response.text}")
+    except requests.RequestException as e:
+        print(f"Error during mining: {e}")
+
+
 # -------------------- Interactive Menu -------------------- #
 def interactive_menu():
     node_count = int(input("How many nodes do you want to launch? "))
@@ -220,16 +276,45 @@ def interactive_menu():
     while True:
         print("\n--- Blockchain Manager Menu ---")
         print("1. Create a transaction")
-        print("2. Trigger verification")
-        print("3. Terminate all nodes")
+        print("2. Mine a block")
+        print("3. Trigger verification")
+        print("4. Display the blockchain")
+        print("5. Show transaction pool")
+        print("6. Terminate all nodes")
         print("--------------------------------")
         choice = input("Enter your choice: ").strip()
 
         if choice == "1":
             create_transaction(ports, node_hashes)
+
         elif choice == "2":
-            manual_verify_latest_block(ports)  # Use the first node as coordinator for simplicity
+            # List all available nodes
+            print("\nAvailable nodes:")
+            for port in ports:
+                print(f"Node at port {port}")
+            # Ask user for the node to mine on
+            selected_port = input("Enter the port of the node to mine on: ").strip()
+            if int(selected_port) in ports:
+                mine_block(f"http://localhost:{selected_port}")
+            else:
+                print("Invalid port selected. Please try again.")
+
         elif choice == "3":
+            manual_verify_latest_block(ports)  # Use the first node as coordinator for simplicity
+
+        elif choice == "4":
+            chain = fetch_chain(base_port)
+            if chain:
+                display_blockchain(chain)
+
+        elif choice == "5":
+            response = requests.get(f"http://localhost:{base_port}/transaction_pool")
+            if response.status_code == 200:
+                display_transaction_pool(response.json().get('transaction_pool', []))
+            else:
+                print("Failed to fetch the transaction pool.")
+
+        elif choice == "6":
             terminate_nodes(launched_nodes)
             break
         else:

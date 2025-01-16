@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Added a new verification script for the request transactions, to check if they work without problems, reduced redundancy in the FlaskBlockChain.py and added additional methods in the launch_nodes.py to make sure that the nodes are correctly terminated afterwards.">
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/verification_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/verification_manager.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -336,7 +335,15 @@
       <option name="project" value="LOCAL" />
       <updated>1734900421296</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not">
+      <option name="closed" value="true" />
+      <created>1737040097807</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1737040097807</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -409,7 +416,8 @@
     <MESSAGE value="Upgraded the script, launch_nodes, to have a simple interactive menu and automated transaction creation, depending on the input." />
     <MESSAGE value="Added new fields 'parent' (for response transactions) and 'hash' for transactions, to simplify the verification process. Added a method to verify request-response transactions' correctness using the newly added fields. For now it's only checking for one specific request transaction that's given (hash of it)." />
     <MESSAGE value="Added a new verification script for the request transactions, to check if they work without problems, reduced redundancy in the FlaskBlockChain.py and added additional methods in the launch_nodes.py to make sure that the nodes are correctly terminated afterwards." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added a new verification script for the request transactions, to check if they work without problems, reduced redundancy in the FlaskBlockChain.py and added additional methods in the launch_nodes.py to make sure that the nodes are correctly terminated afterwards." />
+    <MESSAGE value="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not" />
+    <option name="LAST_COMMIT_MESSAGE" value="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">

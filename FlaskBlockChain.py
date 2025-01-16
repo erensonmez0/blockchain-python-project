@@ -580,6 +580,17 @@ def get_node_id():
     return jsonify(response), 200
 
 
+@app.route('/transaction_pool', methods=['GET'])
+def get_transaction_pool():
+    """
+    Return the current transaction pool
+    """
+    response = {
+        'transaction_pool': blockchain.transaction_pool
+    }
+    return jsonify(response), 200
+
+
 @app.route('/notify_change', methods=['POST'])
 def notify_change():
     values = request.get_json()
