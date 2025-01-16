@@ -50,7 +50,7 @@ def verify_request(port, request_hash):
 
 def main():
     print("=== Request Verification Script ===")
-    port = input("Enter the port of the node (e.g., 5000): ").strip()
+    port = input("Enter the port of the node (e.g., 5000): ").strip()  # Who is going to be the verifier?
 
     print("\nFetching blockchain data...")
     chain = fetch_chain(port)

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import random
 from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -395,6 +396,63 @@ class Blockchain:
         else:
             return {'valid': 0}, 200  # Verification failed
 
+    @staticmethod
+    def get_random_odd_number(max_value):
+        """
+        Generate a random odd number less than the given max_value.
+        """
+        odd_numbers = [n for n in range(1, max_value) if n % 2 == 1]
+        return random.choice(odd_numbers) if odd_numbers else 1  # Default to 1 if no odd numbers are available
+
+    def select_nodes(self, count):
+        """
+        Randomly select 'count' number of nodes from the network.
+        """
+        return random.sample(self.nodes, count)
+
+    def trigger_verification(self, transaction_hash):
+        """
+        Coordinator sends verification requests to a random odd number of selected nodes for the given transaction hash.
+        """
+        print(f"Starting verification for transaction hash: {transaction_hash}")
+        num_nodes = len(self.nodes)
+        if num_nodes < 2:
+            print("Not enough nodes for verification.")
+            return False
+
+        # Get a random odd number less than the total number of nodes
+        odd_count = Blockchain.get_random_odd_number(num_nodes)
+        print(f"Odd count: {odd_count}")
+        selected_nodes = self.select_nodes(odd_count)
+        print(f"Selected nodes: {selected_nodes}")
+
+        responses = []
+
+        for node in selected_nodes:
+            try:
+                response = requests.post(f"http://{node}/verify_request", json={"request_hash": transaction_hash})
+                print(f"Response from node {node}: {response.status_code}, {response.text}")
+                if response.status_code == 200:
+
+                    # Ensure valid JSON response and extract the 'valid' field
+                    response_json = response.json()
+                    if isinstance(response_json, dict) and 'valid' in response_json:
+                        responses.append(response_json['valid'])
+                    else:
+                        print(f"Unexpected response format from node {node}: {response_json}")
+                else:
+                    print(f"Node {node} responded with status {response.status_code}")
+            except requests.RequestException as e:
+                print(f"Error contacting node {node} for verification: {e}")
+
+        # Majority decision
+        if responses.count(1) > len(responses) // 2:
+            print(f"Transaction {transaction_hash} verified successfully.")
+            return True
+        else:
+            print(f"Transaction {transaction_hash} verification failed.")
+            return False
+
     @property
     def last_block(self):
         return self.chain[-1]
@@ -599,8 +657,23 @@ def verify_request():
     if not request_hash:
         return 'Missing request_hash', 400
 
-    result = blockchain.verify_request_response(request_hash)
-    return jsonify(result)
+    result, status = blockchain.verify_request_response(request_hash)
+    return jsonify(result), status
+
+
+@app.route('/trigger_verification', methods=['POST'])
+def trigger_verification():
+    values = request.get_json()
+
+    transaction_hash = values.get('transaction_hash')
+    if not transaction_hash:
+        return jsonify({'error': 'Missing transaction_hash'}), 400
+
+    result = blockchain.trigger_verification(transaction_hash)
+    if result:
+        return jsonify({'message': f'Transaction {transaction_hash} verified successfully.'}), 200
+    else:
+        return jsonify({'message': f'Transaction {transaction_hash} verification failed.'}), 400
 
 
 @app.route('/nodes/resolve', methods=['GET'])
