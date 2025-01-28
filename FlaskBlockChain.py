@@ -1,7 +1,7 @@
 import hashlib
 import json
 import random
-from time import time
+from datetime import datetime
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -155,7 +155,7 @@ class Blockchain:
 
         block = {
             'index': len(self.chain) + 1,
-            'timestamp': time(),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M'),
             'transactions': transactions_to_add,
             'proof': proof,
             'previous_hash': previous_hash or self.hash(self.chain[-1]),

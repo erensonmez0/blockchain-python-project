@@ -29,13 +29,16 @@ def launch_nodes(node_count, base_port=5000):
             stderr=subprocess.PIPE
         )
         processes.append((port, process))
-        print(f"Node launched at http://localhost:{port}")
+        # print(f"Node launched at http://localhost:{port}")
 
     return processes
 
 
 def register_nodes(ports):
     base_url = "http://localhost"
+    registration_success = True
+    failed_registrations = []
+
     for port in ports:
         node_url = f"{base_url}:{port}"
         for other_port in ports:
@@ -44,10 +47,21 @@ def register_nodes(ports):
                     f"{node_url}/nodes/register",
                     json={"nodes": [f"{base_url}:{other_port}"]}
                 )
-                if response.status_code == 201:
-                    print(f"Node {port} registered {other_port} successfully.")
+                if response.status_code != 201:
+                    # Registration failed for this specific node
+                    failed_registrations.append((port, other_port))
+                    registration_success = False
             except requests.RequestException as e:
                 print(f"Failed to register node {other_port} to {port}: {e}")
+                failed_registrations.append((port, other_port))
+                registration_success = False
+
+    if registration_success:
+        print("All nodes are successfully registered with each other.")
+    else:
+        print("Some nodes failed to register. Details:")
+        for port, other_port in failed_registrations:
+            print(f"  Node {port} failed to register Node {other_port}")
 
 
 def terminate_nodes(processes):
@@ -213,6 +227,33 @@ def display_blockchain(chain):
         print(f"  Transactions: {len(block['transactions'])} transactions")
         print("-" * 40)
 
+def inspect_block(block):
+    """
+    Display details of a selected block.
+    """
+    print("\n--- Block Details ---")
+    print(f"Index       : {block['index']}")
+    print(f"Timestamp   : {block['timestamp']}")
+    print(f"Previous Hash: {block['previous_hash']}")
+    print(f"Proof       : {block['proof']}")
+    print(f"Transactions: {len(block['transactions'])} transactions")
+
+    if block["transactions"]:
+        print("\n--- Transactions ---")
+        for tx in block["transactions"]:
+            print(f"  - Sender      : {tx['sender']}")
+            print(f"    Recipient   : {tx['recipient']}")
+            print(f"    Type        : {tx['transaction_type']}")
+            if 'function_name' in tx:
+                print(f"    Function    : {tx['function_name']}({tx['function_parameter']})")
+            if 'parent' in tx:
+                print(f"    Parent Hash : {tx['parent']}")
+            print(f"    Hash        : {tx['hash']}")
+            print("-" * 40)
+    else:
+        print("  No transactions in this block.")
+
+
 
 def display_transaction_pool(transaction_pool):
     print("\n--- Transaction Pool ---")
@@ -279,8 +320,9 @@ def interactive_menu():
         print("2. Mine a block")
         print("3. Trigger verification")
         print("4. Display the blockchain")
-        print("5. Show transaction pool")
-        print("6. Terminate all nodes")
+        print("5. Inspect a specific block")
+        print("6. Show transaction pool")
+        print("7. Terminate all nodes")
         print("--------------------------------")
         choice = input("Enter your choice: ").strip()
 
@@ -300,7 +342,7 @@ def interactive_menu():
                 print("Invalid port selected. Please try again.")
 
         elif choice == "3":
-            manual_verify_latest_block(ports)  # Use the first node as coordinator for simplicity
+            manual_verify_latest_block(ports)
 
         elif choice == "4":
             chain = fetch_chain(base_port)
@@ -308,13 +350,36 @@ def interactive_menu():
                 display_blockchain(chain)
 
         elif choice == "5":
+            chain = fetch_chain(base_port)  # Fetch blockchain from the first node
+            if not chain:
+                print("Error fetching the blockchain.")
+                continue
+
+            print("\nAvailable Blocks:")
+            for i, block in enumerate(chain, start=1):
+                print(f"  {i}. Block {block['index']} - Hash: {Blockchain.hash(block)}")
+
+            selected_block = input("\nEnter the number of the block you want to inspect: ").strip()
+
+            if not selected_block.isdigit():
+                print("Invalid input. Please enter a valid number.")
+                continue
+
+            selected_block = int(selected_block) - 1  # Convert to zero-based index
+
+            if 0 <= selected_block < len(chain):
+                inspect_block(chain[selected_block])  # Pass the block to inspect_block
+            else:
+                print("Invalid block number. Please try again.")
+
+        elif choice == "6":
             response = requests.get(f"http://localhost:{base_port}/transaction_pool")
             if response.status_code == 200:
                 display_transaction_pool(response.json().get('transaction_pool', []))
             else:
                 print("Failed to fetch the transaction pool.")
 
-        elif choice == "6":
+        elif choice == "7":
             terminate_nodes(launched_nodes)
             break
         else:

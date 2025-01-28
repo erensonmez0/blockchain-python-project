@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not">
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Edited the launch_nodes.py script for a better terminal UI menu, added &quot;Mine a Block&quot;, &quot;Display the Blockchain&quot; and &quot;Show transaction pool&quot; options to the menu. Also added a new getter endpoint for the FlaskBlockChain.py for the transaction pool.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -343,7 +343,23 @@
       <option name="project" value="LOCAL" />
       <updated>1737040097807</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="Edited the launch_nodes.py script for a better terminal UI menu, added &quot;Mine a Block&quot;, &quot;Display the Blockchain&quot; and &quot;Show transaction pool&quot; options to the menu. Also added a new getter endpoint for the FlaskBlockChain.py for the transaction pool.">
+      <option name="closed" value="true" />
+      <created>1737056497478</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1737056497478</updated>
+    </task>
+    <task id="LOCAL-00024" summary="Edited the launch_nodes.py script for a better terminal UI menu, added &quot;Mine a Block&quot;, &quot;Display the Blockchain&quot; and &quot;Show transaction pool&quot; options to the menu. Also added a new getter endpoint for the FlaskBlockChain.py for the transaction pool.">
+      <option name="closed" value="true" />
+      <created>1737056511428</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1737056511428</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -417,7 +433,8 @@
     <MESSAGE value="Added new fields 'parent' (for response transactions) and 'hash' for transactions, to simplify the verification process. Added a method to verify request-response transactions' correctness using the newly added fields. For now it's only checking for one specific request transaction that's given (hash of it)." />
     <MESSAGE value="Added a new verification script for the request transactions, to check if they work without problems, reduced redundancy in the FlaskBlockChain.py and added additional methods in the launch_nodes.py to make sure that the nodes are correctly terminated afterwards." />
     <MESSAGE value="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not" />
-    <option name="LAST_COMMIT_MESSAGE" value="Merged the verification script and the launch script together (to launch_nodes.py), added extra logic in FlaskBlockChain.py if the node would be a coordinator node. Clicking on &quot;Trigger Verification&quot; in the menu after running launch_nodes.py, a random coordinator node is going to be chosen and a random uneven amount of nodes is going to be chosen to verify the transactions in the last block. Depending on the votes of the verifier nodes, the coordinator is going to decide if the transactions in the last block are valid or not" />
+    <MESSAGE value="Edited the launch_nodes.py script for a better terminal UI menu, added &quot;Mine a Block&quot;, &quot;Display the Blockchain&quot; and &quot;Show transaction pool&quot; options to the menu. Also added a new getter endpoint for the FlaskBlockChain.py for the transaction pool." />
+    <option name="LAST_COMMIT_MESSAGE" value="Edited the launch_nodes.py script for a better terminal UI menu, added &quot;Mine a Block&quot;, &quot;Display the Blockchain&quot; and &quot;Show transaction pool&quot; options to the menu. Also added a new getter endpoint for the FlaskBlockChain.py for the transaction pool." />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">
