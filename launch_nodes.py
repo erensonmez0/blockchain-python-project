@@ -138,6 +138,54 @@ def manual_verify_latest_block(ports):
             print(f"Error during verification: {e}")
 
 
+def verify_whole_blockchain(ports):
+    """
+    Manually verify all request-response pairs in the entire blockchain.
+    """
+    coordinator_port = assign_coordinator(ports)  # Pick a coordinator node
+    chain = fetch_chain(coordinator_port)
+
+    if not chain:
+        print("Could not fetch blockchain.")
+        return
+
+    print("\n--- Verifying Entire Blockchain ---")
+
+    request_response_map = {}
+    for block in chain[1:]:  # Skip Genesis Block
+        for transaction in block['transactions']:
+            tx_hash = transaction['hash']
+            if transaction['transaction_type'] == "request":
+                request_response_map[tx_hash] = None
+            elif transaction['transaction_type'] == "response":
+                parent_hash = transaction.get('parent')
+                if parent_hash:
+                    request_response_map[parent_hash] = tx_hash  # Link response to request
+
+    for request_hash, response_hash in request_response_map.items():
+        print(f"\nVerifying Request {request_hash}...")
+
+        if response_hash is None:
+            print(f"Pending: Response transaction for request {request_hash} has not been mined yet.")
+            continue
+
+        print(f"Verifying response {response_hash}...")
+
+        try:
+            response = requests.post(
+                f"http://localhost:{coordinator_port}/trigger_verification",
+                json={"transaction_hash": request_hash}
+            )
+            if response.status_code == 200:
+                print(f"{response.json()['message']}")
+            else:
+                print(f"Verification failed: {response.json().get('message', 'Unknown error')}")
+        except requests.RequestException as e:
+            print(f"Error during verification: {e}")
+
+    print("\nBlockchain Verification Complete")
+
+
 def fetch_chain(port):
     try:
         response = requests.get(f"http://localhost:{port}/chain")
@@ -227,6 +275,7 @@ def display_blockchain(chain):
         print(f"  Transactions: {len(block['transactions'])} transactions")
         print("-" * 40)
 
+
 def inspect_block(block):
     """
     Display details of a selected block.
@@ -250,9 +299,6 @@ def inspect_block(block):
                 print(f"    Parent Hash : {tx['parent']}")
             print(f"    Hash        : {tx['hash']}")
             print("-" * 40)
-    else:
-        print("  No transactions in this block.")
-
 
 
 def display_transaction_pool(transaction_pool):
@@ -271,6 +317,45 @@ def display_transaction_pool(transaction_pool):
                 print(f"  Parent Hash : {transaction['parent']}")
             print(f"  Hash        : {transaction['hash']}")
             print("-" * 40)
+
+
+def show_running_nodes(ports):
+    """
+    Display the available running nodes and allow the user to inspect a specific node.
+    """
+    while True:
+        print("\n--- Available Running Nodes ---")
+        for i, port in enumerate(ports, start=1):
+            print(f"{i}. Node at port {port}")
+
+        print(f"{len(ports) + 1}. Go back")
+        print("--------------------------------")
+
+        choice = input("Enter the number of the node you want to inspect (or select Go Back): ").strip()
+
+        if not choice.isdigit():
+            print("Invalid input. Please enter a number.")
+            continue
+
+        choice = int(choice)
+
+        if 1 <= choice <= len(ports):
+            selected_port = ports[choice - 1]
+            try:
+                response = requests.get(f"http://localhost:{selected_port}/id")
+                if response.status_code == 200:
+                    node_id = response.json().get("node_id", "Unknown ID")
+                    print(f"\nNode at port {selected_port} has ID: {node_id}\n")
+                else:
+                    print(f"Failed to fetch ID for node at port {selected_port}.")
+            except requests.RequestException as e:
+                print(f"Error contacting node at port {selected_port}: {e}")
+
+        elif choice == len(ports) + 1:
+            return  # Go back to display menu
+
+        else:
+            print("Invalid choice. Please try again.")
 
 
 def mine_block(node_url):
@@ -300,56 +385,24 @@ def mine_block(node_url):
 
 
 # -------------------- Interactive Menu -------------------- #
-def interactive_menu():
-    node_count = int(input("How many nodes do you want to launch? "))
-    base_port = 5000
-    launched_nodes = launch_nodes(node_count)
 
-    print("Registering nodes with each other...")
-    time.sleep(3)
-
-    ports = [base_port + i for i in range(node_count)]
-    register_nodes(ports)
-
-    print("Fetching node identifiers...")
-    node_hashes = get_node_hashes(ports)
-
+def display_menu(base_port, ports):
     while True:
-        print("\n--- Blockchain Manager Menu ---")
-        print("1. Create a transaction")
-        print("2. Mine a block")
-        print("3. Trigger verification")
-        print("4. Display the blockchain")
-        print("5. Inspect a specific block")
-        print("6. Show transaction pool")
-        print("7. Terminate all nodes")
+        print("\n--- Display Menu ---")
+        print("1. Display the blockchain")
+        print("2. Inspect a specific block")
+        print("3. Display transaction pool")
+        print("4. Show running nodes")
+        print("5. Go back to main menu")
         print("--------------------------------")
         choice = input("Enter your choice: ").strip()
 
         if choice == "1":
-            create_transaction(ports, node_hashes)
-
-        elif choice == "2":
-            # List all available nodes
-            print("\nAvailable nodes:")
-            for port in ports:
-                print(f"Node at port {port}")
-            # Ask user for the node to mine on
-            selected_port = input("Enter the port of the node to mine on: ").strip()
-            if int(selected_port) in ports:
-                mine_block(f"http://localhost:{selected_port}")
-            else:
-                print("Invalid port selected. Please try again.")
-
-        elif choice == "3":
-            manual_verify_latest_block(ports)
-
-        elif choice == "4":
             chain = fetch_chain(base_port)
             if chain:
                 display_blockchain(chain)
 
-        elif choice == "5":
+        elif choice == "2":
             chain = fetch_chain(base_port)  # Fetch blockchain from the first node
             if not chain:
                 print("Error fetching the blockchain.")
@@ -372,14 +425,71 @@ def interactive_menu():
             else:
                 print("Invalid block number. Please try again.")
 
-        elif choice == "6":
+        elif choice == "3":
             response = requests.get(f"http://localhost:{base_port}/transaction_pool")
             if response.status_code == 200:
                 display_transaction_pool(response.json().get('transaction_pool', []))
             else:
                 print("Failed to fetch the transaction pool.")
 
-        elif choice == "7":
+        elif choice == "4":
+            show_running_nodes(ports)
+
+        elif choice == "5":
+            return  # Go back to the main menu
+        else:
+            print("Invalid choice. Please try again.")
+
+
+def interactive_menu():
+    node_count = int(input("How many nodes do you want to launch? "))
+    base_port = 5000
+    launched_nodes = launch_nodes(node_count)
+
+    print("Registering nodes with each other...")
+    time.sleep(3)
+
+    ports = [base_port + i for i in range(node_count)]
+    register_nodes(ports)
+
+    print("Fetching node identifiers...")
+    node_hashes = get_node_hashes(ports)
+
+    while True:
+        print("\n--- Blockchain Manager Menu ---")
+        print("1. Create a transaction")
+        print("2. Mine a block")
+        print("3. Display options")
+        print("4. Verify the latest request-response blocks")
+        print("5. Terminate all nodes")
+        print("--------------------------------")
+        choice = input("Enter your choice: ").strip()
+
+        if choice == "1":
+            create_transaction(ports, node_hashes)
+
+        elif choice == "2":
+            # List all available nodes
+            print("\nAvailable nodes:")
+            for port in ports:
+                print(f"Node at port {port}")
+            # Ask user for the node to mine on
+            selected_port = input("Enter the port of the node to mine on: ").strip()
+            if int(selected_port) in ports:
+                mine_block(f"http://localhost:{selected_port}")
+            else:
+                print("Invalid port selected. Please try again.")
+
+        elif choice == "3":
+            display_menu(base_port, ports)
+
+        elif choice == "4":
+            manual_verify_latest_block(ports)
+
+        # elif choice == "7":
+        #    verify_whole_blockchain(ports)
+
+        elif choice == "5":
             terminate_nodes(launched_nodes)
             break
         else:
