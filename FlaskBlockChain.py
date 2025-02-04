@@ -337,7 +337,7 @@ class Blockchain:
             return "Undefined for negative values"
         return n * (n + 1) // 2
 
-    def verify_request_response(self, request_hash):
+    def verify_request_response(self, request_hash, coordinator_id):
         """
         Verify a specific request-response pair by recomputing the result and comparing it.
 
@@ -389,20 +389,62 @@ class Blockchain:
             return {'error': 'Unsupported function'}, 400
 
         recomputed_result = function_map[function_name](function_parameter)
-        response_result = response_transaction.get('function_parameter')
 
-        if recomputed_result == response_result:
-            return {'valid': 1}, 200  # Verification passed
-        else:
-            return {'valid': 0}, 200  # Verification failed
+        # We get the coordinator's hash (coordinator_id)
+        try:
+            response = requests.get(f"http://localhost:{port}/id")
+            if response.status_code == 200:
+                node_id = response.json().get("node_id", None)
+                if not node_id:
+                    print("Error: Could not retrieve node identifier from /id endpoint.")
+                    return False
+            else:
+                print(f"Error fetching node identifier, status: {response.status_code}")
+                return False
+        except requests.RequestException as e:
+            print(f"Error contacting node for identifier: {e}")
+            return False
+
+        # Create the verification transaction
+        verification_transaction = {
+            "sender": node_id,  # The verifying node
+            "recipient": coordinator_id,  # Coordinator node
+            "transaction_type": "verification",
+            "function_name": function_name,
+            "function_parameter": recomputed_result,
+        }
+
+        coordinator_node_address = self.node_addresses.get(coordinator_id)
+
+        # Send the response transaction if the recipient address is found
+        if coordinator_node_address:
+            coordinator_node_url = f'http://{coordinator_node_address}/transactions/new'
+
+            print("Verification Transaction Before Sending:", verification_transaction)
+            try:
+                response = requests.post(
+                    coordinator_node_url,
+                    json=verification_transaction,
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code == 201:
+                    print(
+                        f"Verification transaction sent to node {coordinator_id}: {response.json()}")
+                else:
+                    print(
+                        f"Failed to send verification to {coordinator_id}: {response.status_code}")
+            except requests.exceptions.RequestException as e:
+                print(f"Error sending verification to node {coordinator_id}: {e}")
+
+        return {"verification_transaction": verification_transaction}, 200
 
     @staticmethod
     def get_random_odd_number(max_value):
         """
         Generate a random odd number less than the given max_value.
         """
-        odd_numbers = [n for n in range(1, max_value) if n % 2 == 1]
-        return random.choice(odd_numbers) if odd_numbers else 1  # Default to 1 if no odd numbers are available
+        odd_numbers = [n for n in range(3, max_value) if n % 2 == 1]
+        return random.choice(odd_numbers) if odd_numbers else 3  # Default to 1 if no odd numbers are available
 
     def select_nodes(self, count):
         """
@@ -416,42 +458,43 @@ class Blockchain:
         """
         print(f"Starting verification for transaction hash: {transaction_hash}")
         num_nodes = len(self.nodes)
-        if num_nodes < 2:
+        if num_nodes < 4:
             print("Not enough nodes for verification.")
             return False
 
         # Get a random odd number less than the total number of nodes
         odd_count = Blockchain.get_random_odd_number(num_nodes)
-        print(f"Odd count: {odd_count}")
         selected_nodes = self.select_nodes(odd_count)
-        print(f"Selected nodes: {selected_nodes}")
 
-        responses = []
+        print(f"Selected nodes for verification: {selected_nodes}")
+
+        # We get the coordinator's hash (coordinator_id)
+        try:
+            response = requests.get(f"http://localhost:{port}/id")
+            if response.status_code == 200:
+                coordinator_id = response.json().get("node_id", None)
+                if not coordinator_id:
+                    print("Error: Could not retrieve node identifier from /id endpoint.")
+                    return False
+            else:
+                print(f"Error fetching node identifier, status: {response.status_code}")
+                return False
+        except requests.RequestException as e:
+            print(f"Error contacting node for identifier: {e}")
+            return False
 
         for node in selected_nodes:
             try:
-                response = requests.post(f"http://{node}/verify_request", json={"request_hash": transaction_hash})
+                response = requests.post(f"http://{node}/verify_request",
+                                         json={"request_hash": transaction_hash, "coordinator_id": coordinator_id})
                 print(f"Response from node {node}: {response.status_code}, {response.text}")
-                if response.status_code == 200:
 
-                    # Ensure valid JSON response and extract the 'valid' field
-                    response_json = response.json()
-                    if isinstance(response_json, dict) and 'valid' in response_json:
-                        responses.append(response_json['valid'])
-                    else:
-                        print(f"Unexpected response format from node {node}: {response_json}")
-                else:
-                    print(f"Node {node} responded with status {response.status_code}")
             except requests.RequestException as e:
                 print(f"Error contacting node {node} for verification: {e}")
 
         # Majority decision
-        if responses.count(1) > len(responses) // 2:
-            print(f"Transaction {transaction_hash} verified successfully.")
-            return True
-        else:
-            print(f"Transaction {transaction_hash} verification failed.")
-            return False
+        print(f"Verification transactions for {transaction_hash} will be recorded in the blockchain.")
+        return True
 
     @property
     def last_block(self):
@@ -664,11 +707,12 @@ def register_nodes():
 def verify_request():
     values = request.get_json()
     request_hash = values.get('request_hash')
+    coordinator_id = values.get('coordinator_id')
 
     if not request_hash:
         return 'Missing request_hash', 400
 
-    result, status = blockchain.verify_request_response(request_hash)
+    result, status = blockchain.verify_request_response(request_hash, coordinator_id)
     return jsonify(result), status
 
 
