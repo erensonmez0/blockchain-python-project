@@ -111,7 +111,6 @@ class Blockchain:
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
             self.chain = new_chain
-            # TODO: Transaction pool overwrite!!!
             return True
 
         return False
@@ -412,6 +411,7 @@ class Blockchain:
             "transaction_type": "verification",
             "function_name": function_name,
             "function_parameter": recomputed_result,
+            "parent": request_hash
         }
 
         coordinator_node_address = self.node_addresses.get(coordinator_id)
