@@ -1,8 +1,6 @@
 import subprocess
 import requests
-import os
 import psutil
-import random
 import time
 from FlaskBlockChain import Blockchain
 
@@ -29,7 +27,6 @@ def launch_nodes(node_count, base_port=5000):
             stderr=subprocess.PIPE
         )
         processes.append((port, process))
-        # print(f"Node launched at http://localhost:{port}")
 
     return processes
 
@@ -95,97 +92,6 @@ def clean_ports(ports):
 
 # -------------------- Blockchain Interaction Functions -------------------- #
 
-def assign_coordinator(ports):
-    """
-    Randomly assign a coordinator from the available nodes.
-    """
-    if not ports:
-        print("No nodes available to assign as coordinator.")
-        return None
-    coordinator = random.choice(ports)
-    print(f"Coordinator assigned: Node {coordinator}")
-    return coordinator
-
-
-def manual_verify_latest_block(ports):
-    """
-    Manually verify all transactions in the latest block.
-    """
-
-    coordinator_port = assign_coordinator(ports)
-    chain = fetch_chain(coordinator_port)
-    if not chain:
-        print("Could not fetch blockchain.")
-        return
-
-    latest_block = chain[-2]
-    print(f"Latest Block Index: {latest_block['index']}")
-    for transaction in latest_block['transactions']:
-        transaction_hash = transaction['hash']
-        print(f"Verifying transaction {transaction_hash}...")
-
-        # Call the trigger_verification endpoint
-        try:
-            response = requests.post(
-                f"http://localhost:{coordinator_port}/trigger_verification",
-                json={"transaction_hash": transaction_hash}
-            )
-            if response.status_code == 200:
-                print(response.json()['message'])
-            else:
-                print(f"Verification failed: {response.json().get('message', 'Unknown error')}")
-        except requests.RequestException as e:
-            print(f"Error during verification: {e}")
-
-
-def verify_whole_blockchain(ports):
-    """
-    Manually verify all request-response pairs in the entire blockchain.
-    """
-    coordinator_port = assign_coordinator(ports)  # Pick a coordinator node
-    chain = fetch_chain(coordinator_port)
-
-    if not chain:
-        print("Could not fetch blockchain.")
-        return
-
-    print("\n--- Verifying Entire Blockchain ---")
-
-    request_response_map = {}
-    for block in chain[1:]:  # Skip Genesis Block
-        for transaction in block['transactions']:
-            tx_hash = transaction['hash']
-            if transaction['transaction_type'] == "request":
-                request_response_map[tx_hash] = None
-            elif transaction['transaction_type'] == "response":
-                parent_hash = transaction.get('parent')
-                if parent_hash:
-                    request_response_map[parent_hash] = tx_hash  # Link response to request
-
-    for request_hash, response_hash in request_response_map.items():
-        print(f"\nVerifying Request {request_hash}...")
-
-        if response_hash is None:
-            print(f"Pending: Response transaction for request {request_hash} has not been mined yet.")
-            continue
-
-        print(f"Verifying response {response_hash}...")
-
-        try:
-            response = requests.post(
-                f"http://localhost:{coordinator_port}/trigger_verification",
-                json={"transaction_hash": request_hash}
-            )
-            if response.status_code == 200:
-                print(f"{response.json()['message']}")
-            else:
-                print(f"Verification failed: {response.json().get('message', 'Unknown error')}")
-        except requests.RequestException as e:
-            print(f"Error during verification: {e}")
-
-    print("\nBlockchain Verification Complete")
-
-
 def fetch_chain(port):
     try:
         response = requests.get(f"http://localhost:{port}/chain")
@@ -196,22 +102,6 @@ def fetch_chain(port):
             return None
     except requests.RequestException as e:
         print(f"Error fetching chain from port {port}: {e}")
-        return None
-
-
-def verify_request(port, request_hash):
-    try:
-        response = requests.post(
-            f"http://localhost:{port}/verify_request",
-            json={"request_hash": request_hash}
-        )
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to verify request. Response: {response.status_code}, {response.text}")
-            return None
-    except requests.RequestException as e:
-        print(f"Error verifying request at port {port}: {e}")
         return None
 
 
@@ -460,8 +350,7 @@ def interactive_menu():
         print("1. Create a transaction")
         print("2. Mine a block")
         print("3. Display options")
-        print("4. Verify the latest request-response blocks")
-        print("5. Terminate all nodes")
+        print("4. Terminate all nodes")
         print("--------------------------------")
         choice = input("Enter your choice: ").strip()
 
@@ -484,12 +373,6 @@ def interactive_menu():
             display_menu(base_port, ports)
 
         elif choice == "4":
-            manual_verify_latest_block(ports)
-
-        # elif choice == "7":
-        #    verify_whole_blockchain(ports)
-
-        elif choice == "5":
             terminate_nodes(launched_nodes)
             break
         else:

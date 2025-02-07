@@ -105,8 +105,13 @@ class Blockchain:
 
                 # Check if the length is longer and the chain is valid
                 if length > max_length and self.valid_chain(chain):
-                    max_length = length
-                    new_chain = chain
+
+                    last_block = chain[-1]
+                    if self.validate_response_transaction(last_block):
+                        max_length = length
+                        new_chain = chain
+                    else:
+                        print(f"Rejected chain from {node} due to an invalid response transaction.")
 
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
@@ -114,6 +119,61 @@ class Blockchain:
             return True
 
         return False
+
+    def validate_response_transaction(self, last_block):
+        """
+        Validate the first response transaction in the last added block.
+
+        :param last_block: The latest block in the chain.
+        :return: True if the first response transaction is valid, False otherwise.
+        """
+
+        # Find the first response transaction in the last block
+        response_transaction = None
+        for transaction in last_block['transactions']:
+            if transaction['transaction_type'] == "response":
+                response_transaction = transaction
+                break  # Only check the first response transaction
+
+        # If no response transaction is found, return True (nothing to validate)
+        if not response_transaction:
+            return True
+
+            # Find the matching request transaction in the **entire chain**
+        parent_hash = response_transaction.get('parent')
+        request_transaction = None
+
+        for block in self.chain:
+            for transaction in block['transactions']:
+                if transaction.get('hash') == parent_hash:  # Match request transaction
+                    request_transaction = transaction
+                    break
+            if request_transaction:
+                break  # Stop searching once found
+
+        # If no matching request transaction is found, reject the chain
+        if not request_transaction:
+            return False
+
+            # Recompute expected response result
+        function_name = request_transaction.get('function_name')
+        function_parameter = request_transaction.get('function_parameter')
+
+        function_map = {
+            "fibonacci": self.calculate_fibonacci,
+            "hash_test": self.hash_n_times,
+            "factorial": self.calculate_factorial,
+            "sum_natural": self.sum_natural,
+        }
+
+        # If function is invalid, reject the chain
+        if function_name not in function_map:
+            return False
+
+        expected_result = function_map[function_name](function_parameter)
+
+        # Check if the response result is correct
+        return response_transaction['function_parameter'] == expected_result
 
     def notify_neighbors(self):
         """
@@ -336,166 +396,6 @@ class Blockchain:
             return "Undefined for negative values"
         return n * (n + 1) // 2
 
-    def verify_request_response(self, request_hash, coordinator_id):
-        """
-        Verify a specific request-response pair by recomputing the result and comparing it.
-
-        :param request_hash: The hash of the request transaction to verify
-        :return: 1 if valid, 0 if invalid
-        """
-        # Search for the request transaction in the blockchain
-        request_transaction = None
-        for block in self.chain:
-            for transaction in block['transactions']:
-                if transaction.get('hash') == request_hash:
-                    request_transaction = transaction
-                    break
-            if request_transaction:
-                break
-
-        if not request_transaction:
-            return {'error': 'Request transaction not found'}, 404
-
-        # Find the linked response transaction
-        parent_hash = request_hash
-        response_transaction = None
-        for block in self.chain:
-            for transaction in block['transactions']:
-                if transaction.get('parent') == parent_hash:
-                    response_transaction = transaction
-                    break
-            if response_transaction:
-                break
-
-        if not response_transaction:
-            return {'error': 'Response transaction not found'}, 404
-
-        # Recompute the function result locally
-        function_name = request_transaction.get('function_name')
-        function_parameter = request_transaction.get('function_parameter')
-
-        if not function_name or function_parameter is None:
-            return {'error': 'Invalid request transaction'}, 400
-
-        function_map = {
-            "fibonacci": self.calculate_fibonacci,
-            "hash_test": self.hash_n_times,
-            "factorial": self.calculate_factorial,
-            "sum_natural": self.sum_natural,
-        }
-
-        if function_name not in function_map:
-            return {'error': 'Unsupported function'}, 400
-
-        recomputed_result = function_map[function_name](function_parameter)
-
-        # We get the coordinator's hash (coordinator_id)
-        try:
-            response = requests.get(f"http://localhost:{port}/id")
-            if response.status_code == 200:
-                node_id = response.json().get("node_id", None)
-                if not node_id:
-                    print("Error: Could not retrieve node identifier from /id endpoint.")
-                    return False
-            else:
-                print(f"Error fetching node identifier, status: {response.status_code}")
-                return False
-        except requests.RequestException as e:
-            print(f"Error contacting node for identifier: {e}")
-            return False
-
-        # Create the verification transaction
-        verification_transaction = {
-            "sender": node_id,  # The verifying node
-            "recipient": coordinator_id,  # Coordinator node
-            "transaction_type": "verification",
-            "function_name": function_name,
-            "function_parameter": recomputed_result,
-            "parent": request_hash
-        }
-
-        coordinator_node_address = self.node_addresses.get(coordinator_id)
-
-        # Send the response transaction if the recipient address is found
-        if coordinator_node_address:
-            coordinator_node_url = f'http://{coordinator_node_address}/transactions/new'
-
-            print("Verification Transaction Before Sending:", verification_transaction)
-            try:
-                response = requests.post(
-                    coordinator_node_url,
-                    json=verification_transaction,
-                    headers={"Content-Type": "application/json"}
-                )
-                if response.status_code == 201:
-                    print(
-                        f"Verification transaction sent to node {coordinator_id}: {response.json()}")
-                else:
-                    print(
-                        f"Failed to send verification to {coordinator_id}: {response.status_code}")
-            except requests.exceptions.RequestException as e:
-                print(f"Error sending verification to node {coordinator_id}: {e}")
-
-        return {"verification_transaction": verification_transaction}, 200
-
-    @staticmethod
-    def get_random_odd_number(max_value):
-        """
-        Generate a random odd number less than the given max_value.
-        """
-        odd_numbers = [n for n in range(3, max_value) if n % 2 == 1]
-        return random.choice(odd_numbers) if odd_numbers else 3  # Default to 1 if no odd numbers are available
-
-    def select_nodes(self, count):
-        """
-        Randomly select 'count' number of nodes from the network.
-        """
-        return random.sample(self.nodes, count)
-
-    def trigger_verification(self, transaction_hash):
-        """
-        Coordinator sends verification requests to a random odd number of selected nodes for the given transaction hash.
-        """
-        print(f"Starting verification for transaction hash: {transaction_hash}")
-        num_nodes = len(self.nodes)
-        if num_nodes < 4:
-            print("Not enough nodes for verification.")
-            return False
-
-        # Get a random odd number less than the total number of nodes
-        odd_count = Blockchain.get_random_odd_number(num_nodes)
-        selected_nodes = self.select_nodes(odd_count)
-
-        print(f"Selected nodes for verification: {selected_nodes}")
-
-        # We get the coordinator's hash (coordinator_id)
-        try:
-            response = requests.get(f"http://localhost:{port}/id")
-            if response.status_code == 200:
-                coordinator_id = response.json().get("node_id", None)
-                if not coordinator_id:
-                    print("Error: Could not retrieve node identifier from /id endpoint.")
-                    return False
-            else:
-                print(f"Error fetching node identifier, status: {response.status_code}")
-                return False
-        except requests.RequestException as e:
-            print(f"Error contacting node for identifier: {e}")
-            return False
-
-        for node in selected_nodes:
-            try:
-                response = requests.post(f"http://{node}/verify_request",
-                                         json={"request_hash": transaction_hash, "coordinator_id": coordinator_id})
-                print(f"Response from node {node}: {response.status_code}, {response.text}")
-
-            except requests.RequestException as e:
-                print(f"Error contacting node {node} for verification: {e}")
-
-        # Majority decision
-        print(f"Verification transactions for {transaction_hash} will be recorded in the blockchain.")
-        return True
-
     @property
     def last_block(self):
         return self.chain[-1]
@@ -701,34 +601,6 @@ def register_nodes():
         'total_nodes': list(blockchain.nodes),
     }
     return jsonify(response), 201
-
-
-@app.route('/verify_request', methods=['POST'])
-def verify_request():
-    values = request.get_json()
-    request_hash = values.get('request_hash')
-    coordinator_id = values.get('coordinator_id')
-
-    if not request_hash:
-        return 'Missing request_hash', 400
-
-    result, status = blockchain.verify_request_response(request_hash, coordinator_id)
-    return jsonify(result), status
-
-
-@app.route('/trigger_verification', methods=['POST'])
-def trigger_verification():
-    values = request.get_json()
-
-    transaction_hash = values.get('transaction_hash')
-    if not transaction_hash:
-        return jsonify({'error': 'Missing transaction_hash'}), 400
-
-    result = blockchain.trigger_verification(transaction_hash)
-    if result:
-        return jsonify({'message': f'Transaction {transaction_hash} verified successfully.'}), 200
-    else:
-        return jsonify({'message': f'Transaction {transaction_hash} verification failed.'}), 400
 
 
 @app.route('/nodes/resolve', methods=['GET'])
