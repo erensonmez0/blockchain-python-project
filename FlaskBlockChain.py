@@ -172,6 +172,60 @@ class Blockchain:
 
         expected_result = function_map[function_name](function_parameter)
 
+        verification_response = None
+
+        if response_transaction['function_parameter'] == expected_result:
+            verification_response = "correct"
+        else:
+            verification_response = "incorrect"
+
+        # We get the this node's hash (node_id)
+        try:
+            response = requests.get(f"http://localhost:{port}/id")
+            if response.status_code == 200:
+                node_id = response.json().get("node_id", None)
+                if not node_id:
+                    print("Error: Could not retrieve node identifier from /id endpoint.")
+                    return False
+            else:
+                print(f"Error fetching node identifier, status: {response.status_code}")
+                return False
+        except requests.RequestException as e:
+            print(f"Error contacting node for identifier: {e}")
+            return False
+
+        request_node_id = response_transaction['recipient']
+        # Create the verification transaction
+        verification_transaction = {
+            "sender": node_id,  # The verifying node
+            "recipient": request_node_id,
+            "transaction_type": "verification",
+            "function_name": function_name,
+            "function_parameter": verification_response,
+        }
+
+        request_node_address = self.node_addresses.get(request_node_id)
+
+        # Send the response transaction if the recipient address is found
+        if request_node_address:
+            coordinator_node_url = f'http://{request_node_address}/transactions/new'
+
+            print("Verification Transaction Before Sending:", verification_transaction)
+            try:
+                response = requests.post(
+                    coordinator_node_url,
+                    json=verification_transaction,
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code == 201:
+                    print(
+                        f"Verification transaction sent to node {request_node_id}: {response.json()}")
+                else:
+                    print(
+                        f"Failed to send verification to {request_node_id}: {response.status_code}")
+            except requests.exceptions.RequestException as e:
+                print(f"Error sending verification to node {request_node_id}: {e}")
+
         # Check if the response result is correct
         return response_transaction['function_parameter'] == expected_result
 
@@ -239,7 +293,7 @@ class Blockchain:
     def new_transaction(self, sender, recipient, transaction_type="standard", function_name=None,
                         function_parameter=None, parent=None):
 
-        if function_parameter is not None:
+        if function_parameter is not None and transaction_type != "verification":
             try:
                 function_parameter = int(function_parameter)
             except ValueError:
