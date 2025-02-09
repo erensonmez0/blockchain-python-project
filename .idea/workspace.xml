@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Created a different version of verification, this time directly in the resolve_conflicts method for every time a response transaction is being mined." />
+    <list default="true" id="2e360a18-a564-4f78-b79c-d893ad1b85bc" name="Default" comment="Added a new transaction type, &quot;verification&quot;, and it helps us to see if the first transaction of the blocks filled with response transactions are correct." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -397,7 +397,15 @@
       <option name="project" value="LOCAL" />
       <updated>1738939907872</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="Added a new transaction type, &quot;verification&quot;, and it helps us to see if the first transaction of the blocks filled with response transactions are correct.">
+      <option name="closed" value="true" />
+      <created>1739027325252</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1739027325252</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -476,7 +484,8 @@
     <MESSAGE value="Fixed the menu, added an extended version of menu for the display functions. Added a new &quot;Show running nodes&quot; function." />
     <MESSAGE value="Added the new logic, &quot;verification&quot; transactions for the verification process, but right now coordinator doesn't check if the results match / are correct" />
     <MESSAGE value="Created a different version of verification, this time directly in the resolve_conflicts method for every time a response transaction is being mined." />
-    <option name="LAST_COMMIT_MESSAGE" value="Created a different version of verification, this time directly in the resolve_conflicts method for every time a response transaction is being mined." />
+    <MESSAGE value="Added a new transaction type, &quot;verification&quot;, and it helps us to see if the first transaction of the blocks filled with response transactions are correct." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added a new transaction type, &quot;verification&quot;, and it helps us to see if the first transaction of the blocks filled with response transactions are correct." />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/blockchain.py">

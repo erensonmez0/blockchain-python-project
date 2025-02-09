@@ -1,6 +1,6 @@
 import hashlib
 import json
-import random
+import time
 from datetime import datetime
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -202,6 +202,7 @@ class Blockchain:
             "transaction_type": "verification",
             "function_name": function_name,
             "function_parameter": verification_response,
+            "parent": parent_hash,
         }
 
         request_node_address = self.node_addresses.get(request_node_id)
@@ -277,8 +278,8 @@ class Blockchain:
         self.chain.append(block)
 
         # Remove mined transactions from the pool
-        self.transaction_pool = [transaction for transaction in self.transaction_pool if
-                                 transaction not in transactions_to_add]
+        self.transaction_pool = [tx for tx in self.transaction_pool if
+                                 tx['hash'] not in {t['hash'] for t in transactions_to_add}]
 
         # Notify neighbors after adding a new block
         self.notify_neighbors()
@@ -318,7 +319,7 @@ class Blockchain:
             transaction['function_name'] = function_name
         if function_parameter is not None:
             transaction['function_parameter'] = function_parameter
-        if transaction_type == "response":
+        if transaction_type == "response" or transaction_type == "verification":
             transaction['parent'] = parent
 
         # Compute the hash for the transaction (excluding the hash field itself)
@@ -389,6 +390,7 @@ class Blockchain:
 
         # Update the last processed block index to the latest block in the chain
         # self.notify_transaction_pool_update()
+        self.transaction_pool = [tx for tx in self.transaction_pool if tx['transaction_type'] != "response"]
         self.last_processed_block = len(self.chain) - 1
 
     @staticmethod
@@ -627,6 +629,59 @@ def update_transaction_pool():
     response = {
         'message': 'Transaction pool updated successfully',
     }
+    return jsonify(response), 200
+
+
+@app.route('/count_verdicts', methods=['GET'])
+def count_verdicts():
+    start_time = time.perf_counter()  # Start timing the request
+
+    # Find the latest block with verification transactions
+    verification_block = None
+    for block in reversed(blockchain.chain):
+        for transaction in block['transactions']:
+            if transaction['transaction_type'] == "verification":
+                verification_block = block
+                break
+        if verification_block:
+            break
+
+    if not verification_block:
+        return jsonify({"message": "No verification transactions found in the blockchain."}), 200
+
+    correct_count = 0
+    incorrect_count = 0
+
+    # Count verdicts in the verification block
+    for transaction in verification_block['transactions']:
+        if transaction['transaction_type'] == "verification":
+            if transaction['function_parameter'] == "correct":
+                correct_count += 1
+            elif transaction['function_parameter'] == "incorrect":
+                incorrect_count += 1
+
+    # Prepare the response message
+    if correct_count == 0 and incorrect_count == 0:
+        verdict_message = "No verdicts found in the latest verification block."
+    elif incorrect_count == 0:
+        verdict_message = f"All verdicts are correct - Total: {correct_count}"
+    else:
+        verdict_message = f"Verdict summary - Correct: {correct_count}, Incorrect: {incorrect_count}"
+
+    # Calculate the time taken for the counting process
+    elapsed_time = time.perf_counter() - start_time
+
+    # Convert to milliseconds if the time is less than 1 second
+    if elapsed_time < 1:
+        final_time = f"{round(elapsed_time * 1000, 3)} ms"
+    else:
+        final_time = f"{round(elapsed_time, 3)} second"
+
+    response = {
+        "message": verdict_message,
+        "time_taken_seconds": final_time
+    }
+
     return jsonify(response), 200
 
 

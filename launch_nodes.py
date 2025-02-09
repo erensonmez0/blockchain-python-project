@@ -274,6 +274,23 @@ def mine_block(node_url):
         print(f"Error during mining: {e}")
 
 
+def manual_count_verdicts(port):
+    """
+    Make a request to the /count_verdicts endpoint of the given node and display the result.
+    """
+    print(f"\n--- Counting Verdicts at Node {port} ---")
+    try:
+        response = requests.get(f"http://localhost:{port}/count_verdicts")
+        if response.status_code == 200:
+            result = response.json()
+            print(f"{result['message']}")
+            print(f"Time Taken: {result['time_taken_seconds']}")
+        else:
+            print(f"Failed to count verdicts at node {port}. Status: {response.status_code}")
+    except requests.RequestException as e:
+        print(f"Error during manual verdict counting at node {port}: {e}")
+
+
 # -------------------- Interactive Menu -------------------- #
 
 def display_menu(base_port, ports):
@@ -350,7 +367,8 @@ def interactive_menu():
         print("1. Create a transaction")
         print("2. Mine a block")
         print("3. Display options")
-        print("4. Terminate all nodes")
+        print("4. Count verdicts for the latest verification")
+        print("5. Terminate all nodes")
         print("--------------------------------")
         choice = input("Enter your choice: ").strip()
 
@@ -372,7 +390,14 @@ def interactive_menu():
         elif choice == "3":
             display_menu(base_port, ports)
 
-        elif choice == "4":
+        elif choice == "4":  # Manual counting of verdicts
+            selected_port = input("Enter the port of the node to count verdicts on: ").strip()
+            if int(selected_port) in ports:
+                manual_count_verdicts(int(selected_port))
+            else:
+                print("Invalid port selected. Please try again.")
+
+        elif choice == "5":
             terminate_nodes(launched_nodes)
             break
         else:
