@@ -249,6 +249,16 @@ def show_running_nodes(ports):
 
 
 def mine_block(node_url):
+    # Check transaction pool before mining
+    transaction_pool_response = requests.get(f"{node_url}/transaction_pool")
+    transaction_pool = transaction_pool_response.json().get('transaction_pool', [])
+
+    if not transaction_pool:
+        print()
+        print("Transaction pool is empty. No block to mine.")
+        print()
+        return
+
     try:
         response = requests.get(f"{node_url}/mine")
         if response.status_code == 200:

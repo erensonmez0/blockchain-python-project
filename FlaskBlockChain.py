@@ -281,15 +281,29 @@ class Blockchain:
         self.transaction_pool = [tx for tx in self.transaction_pool if
                                  tx['hash'] not in {t['hash'] for t in transactions_to_add}]
 
-        # Notify neighbors after adding a new block
         self.notify_neighbors()
-
-        # Notify neighbors about the updated transaction pool
         self.notify_transaction_pool_update()
-        # Reset the current list of transactions
-        # self.current_transactions = []
 
+        self.broadcast_mined_transactions(transactions_to_add)
         return block
+
+    def broadcast_mined_transactions(self, mined_transactions):
+        """
+        Broadcast the list of mined transactions to all nodes.
+        """
+        for node in self.nodes:
+            try:
+                response = requests.post(
+                    f'http://{node}/remove_mined_transactions',
+                    json={'mined_transactions': [tx['hash'] for tx in mined_transactions]},
+                    headers={'Content-Type': 'application/json'}
+                )
+                if response.status_code == 200:
+                    print(f"Successfully removed mined transactions from node {node}")
+                else:
+                    print(f"Failed to remove mined transactions from node {node}: {response.status_code}")
+            except requests.exceptions.RequestException as e:
+                print(f"Error removing mined transactions from node {node}: {e}")
 
     def new_transaction(self, sender, recipient, transaction_type="standard", function_name=None,
                         function_parameter=None, parent=None):
@@ -326,8 +340,13 @@ class Blockchain:
         transaction_hash = hashlib.sha256(json.dumps(transaction, sort_keys=True).encode()).hexdigest()
         transaction['hash'] = transaction_hash  # Add the computed hash to the transaction
 
-        # Prevent duplicate transactions
-        if transaction in self.transaction_pool or any(transaction in block['transactions'] for block in self.chain):
+        # Check for duplicates in the transaction pool and the blockchain
+        if any(tx['hash'] == transaction_hash for tx in self.transaction_pool):
+            print(f"Transaction already in pool: {transaction_hash}")
+            return self.last_block['index'] + 1
+
+        if any(tx['hash'] == transaction_hash for block in self.chain for tx in block['transactions']):
+            print(f"Transaction already in blockchain: {transaction_hash}")
             return self.last_block['index'] + 1
 
         self.transaction_pool.append(transaction)
@@ -389,8 +408,6 @@ class Blockchain:
                                     print(f"Error sending response to node {recipient_node_identifier}: {e}")
 
         # Update the last processed block index to the latest block in the chain
-        # self.notify_transaction_pool_update()
-        self.transaction_pool = [tx for tx in self.transaction_pool if tx['transaction_type'] != "response"]
         self.last_processed_block = len(self.chain) - 1
 
     @staticmethod
@@ -572,6 +589,26 @@ def new_transaction():
     return jsonify(response), 201
 
 
+@app.route('/remove_mined_transactions', methods=['POST'])
+def remove_mined_transactions():
+    values = request.get_json()
+    mined_transactions = values.get('mined_transactions')
+
+    if mined_transactions is None:
+        return 'Missing mined transactions data', 400
+
+    # Remove mined transactions from the pool
+    blockchain.transaction_pool = [
+        tx for tx in blockchain.transaction_pool
+        if tx['hash'] not in mined_transactions
+    ]
+
+    response = {
+        'message': 'Mined transactions removed successfully',
+    }
+    return jsonify(response), 200
+
+
 @app.route('/id', methods=['GET'])
 def get_node_id():
     # Retrieve the unique identifier of the node
@@ -618,13 +655,15 @@ def notify_change():
 @app.route('/update_transaction_pool', methods=['POST'])
 def update_transaction_pool():
     values = request.get_json()
-    updated_pool = values.get('transaction_pool')
+    new_transactions = values.get('transaction_pool')
 
-    if updated_pool is None:
+    if new_transactions is None:
         return 'Missing transaction pool data', 400
 
-    # Update the node's local transaction pool
-    blockchain.transaction_pool = updated_pool
+    # Append new transactions to the pool, avoiding duplicates
+    for tx in new_transactions:
+        if tx not in blockchain.transaction_pool:
+            blockchain.transaction_pool.append(tx)
 
     response = {
         'message': 'Transaction pool updated successfully',
